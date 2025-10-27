@@ -12,9 +12,9 @@ const AdminSchema = new Schema({
   },
   password: String,
   role: {
-    type: [String],
+    type: String,
     enum: ["Admin"],
-    default: ["Admin"],
+    default: "Admin",
   },
   refreshToken: String,
   otp: {

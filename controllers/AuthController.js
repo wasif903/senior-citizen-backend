@@ -296,9 +296,6 @@ const changePassword = async (req, res, next) => {
 };
 
 
-
-
-
 // UPDATE PROFILE
 // METHOD: PATCH
 // ENDPOINT: /api/update-user/:id
