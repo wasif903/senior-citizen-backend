@@ -12,6 +12,10 @@ import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 // DB Connection
 import connectDB from "./config/DB.js";
 
+// App Connection
+import { createServer } from "http";
+import ngrok from "ngrok"
+
 // Routes
 import AuthRoutes from "./routes/AuthRoutes.js";
 import PlanRoutes from "./routes/PlanRoutes.js";
@@ -22,6 +26,8 @@ import { allowedOrigins } from "./utils/AllowedOrigins.js";
 dotenv.config();
 
 const app = express();
+
+const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
 
@@ -81,6 +87,19 @@ app.use(ErrorHandler);
 // === Server Start ===
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+httpServer.listen(PORT, async () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+
+  if (process.env.USE_NGROK === "true") {
+    try {
+      const url = await ngrok.connect(PORT);
+      console.log(`ngrok tunnel: ${url}`);
+    } catch (err) {
+      console.error("Failed to start ngrok:", err);
+    }
+  }
 });
+
+// app.listen(PORT, () => {
+//   console.log(`🚀 Server running on http://localhost:${PORT}`);
+// });
