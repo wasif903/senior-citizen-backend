@@ -3,11 +3,12 @@ import bcrypt from "bcrypt";
 import {
   generateAccessToken,
   generateRefreshToken,
-  generateOTP,
+  generateOTP
 } from "../utils/TokenGenerator.js";
 import AdminModel from "../models/AdminSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
+import UserModel from "../models/UserSchema.js";
 
 // REGISTER
 // METHOD : POST
@@ -16,10 +17,9 @@ const register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
-    const existingUser =
-      (await AdminModel.findOne({
-        $or: [{ username }, { email }],
-      }));
+    const existingUser = await AdminModel.findOne({
+      $or: [{ username }, { email }]
+    });
     if (existingUser) {
       return res
         .status(400)
@@ -31,7 +31,7 @@ const register = async (req, res, next) => {
     const newUser = new AdminModel({
       username,
       email,
-      password: hashedPassword,
+      password: hashedPassword
     });
 
     await newUser.save();
@@ -47,6 +47,7 @@ const register = async (req, res, next) => {
       email: newUser.email,
       role: newUser.role,
       _id: newUser._id,
+      createdAt: newUser.createdAt
     };
 
     // Return tokens
@@ -54,10 +55,93 @@ const register = async (req, res, next) => {
       message: "User registered successfully",
       accessToken,
       refreshToken,
-      user: userDetails,
+      user: userDetails
     });
   } catch (err) {
     next(err);
+  }
+};
+
+// REGISTER
+// METHOD : POST
+// ENDPOINT: /api/user-register
+const handleRegisterUser = async (req, res, next) => {
+  try {
+    const {
+      username,
+      email,
+      idCardNumber,
+      medicareNumber,
+      dob,
+      address,
+      gender,
+      bloodGroup,
+      pastInjury,
+      pastOperation,
+      medicines,
+      healthNote,
+      password
+    } = req.body;
+
+    const existingUser = await UserModel.findOne({
+      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+    });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ message: "Username or email already taken" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new UserModel({
+      username,
+      email,
+      idCardNumber,
+      medicareNumber,
+      dob,
+      address,
+      gender,
+      bloodGroup,
+      pastInjury,
+      pastOperation,
+      medicines,
+      healthNote,
+      password: hashedPassword
+    });
+    await newUser.save();
+
+    const accessToken = generateAccessToken(newUser);
+    const refreshToken = generateRefreshToken(newUser);
+
+    newUser.refreshToken = refreshToken;
+    await newUser.save();
+
+    const userDetails = {
+      _id: newUser._id,
+      username: newUser.username,
+      email: newUser.email,
+      idCardNumber: newUser.idCardNumber,
+      medicareNumber: newUser.medicareNumber,
+      dob: newUser.dob,
+      address: newUser.address,
+      gender: newUser.gender,
+      bloodGroup: newUser.bloodGroup,
+      pastInjury: newUser.pastInjury,
+      pastOperation: newUser.pastOperation,
+      medicines: newUser.medicines,
+      healthNote: newUser.healthNote
+    };
+
+    res.status(201).json({
+      message: "User registered successfully",
+      accessToken,
+      refreshToken,
+      user: userDetails
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
   }
 };
 
@@ -70,7 +154,10 @@ const login = async (req, res, next) => {
 
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        $or: [{ email: identifier }, { username: identifier }]
+      })) ||
+      (await UserModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }]
       }));
 
     if (!user) {
@@ -96,40 +183,24 @@ const login = async (req, res, next) => {
         email: user.email,
         role: user.role,
         _id: user._id,
-        createdAt: user.createdAt,
+        createdAt: user.createdAt
       };
-    } else if (user.role.includes("Agency")) {
+    } else if (user.role.includes("User")) {
       details = {
-        username: user.username,
-        agencyName: user.agencyName,
-        companyCode: user.companyCode,
-        email: user.email,
-        role: user.role,
         _id: user._id,
-        createdAt: user.createdAt,
-      };
-    } else if (user.role.includes("Operator")) {
-      details = {
         username: user.username,
         email: user.email,
-        phone: user.phone,
-        role: user.role,
-        agencyID: user.agencyID,
-        officeID: user.officeID,
-        status: user.status,
-        _id: user._id,
-        createdAt: user.createdAt,
-      };
-    } else {
-      details = {
-        username: user.username,
-        email: user.email,
-        country: user.country,
-        countryCode: user.countryCode,
-        phone: user.phone,
-        role: user.role,
-        _id: user._id,
-        createdAt: user.createdAt,
+        idCardNumber: user.idCardNumber,
+        medicareNumber: user.medicareNumber,
+        dob: user.dob,
+        address: user.address,
+        gender: user.gender,
+        bloodGroup: user.bloodGroup,
+        pastInjury: user.pastInjury,
+        pastOperation: user.pastOperation,
+        medicines: user.medicines,
+        healthNote: user.healthNote,
+        createdAt: user.createdAt
       };
     }
 
@@ -153,7 +224,8 @@ const refreshToken = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
     const user =
-      (await AdminModel.findById(decoded.id));
+      (await AdminModel.findById(decoded.id)) ||
+      (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -185,7 +257,8 @@ const logout = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
     const user =
-      (await AdminModel.findById(decoded.id));
+      (await AdminModel.findById(decoded.id)) ||
+      (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -208,7 +281,10 @@ const forgetPassword = async (req, res, next) => {
     const { identifier } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        $or: [{ email: identifier }, { username: identifier }]
+      })) ||
+      (await UserModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }]
       }));
 
     if (!user) {
@@ -224,7 +300,7 @@ const forgetPassword = async (req, res, next) => {
     autoMailer({
       to: user.email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
+      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
     });
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
@@ -241,7 +317,10 @@ const verifyOtp = async (req, res, next) => {
     const { identifier, otp } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        $or: [{ email: identifier }, { username: identifier }]
+      })) ||
+      (await UserModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }]
       }));
 
     if (!user) {
@@ -270,7 +349,10 @@ const changePassword = async (req, res, next) => {
     const { identifier, otp, newPassword } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }],
+        $or: [{ email: identifier }, { username: identifier }]
+      })) ||
+      (await UserModel.findOne({
+        $or: [{ email: identifier }, { username: identifier }]
       }));
 
     if (!user) {
@@ -295,39 +377,34 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-
 // UPDATE PROFILE
 // METHOD: PATCH
 // ENDPOINT: /api/update-user/:id
 const HandleUpdateProfile = async (req, res, next) => {
   try {
-
     const { id } = req.params;
 
-    const user =
-      (await AdminModel.findById(id));
-
+    const user = await AdminModel.findById(id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     if (user.role.includes("Agency")) {
-      return HandleUpdateAgency(req, res, next, user)
+      return HandleUpdateAgency(req, res, next, user);
     } else if (user.role.includes("Operator")) {
-      return HandleUpdateOperator(req, res, next, user)
+      return HandleUpdateOperator(req, res, next, user);
     } else if (user.role.includes("Admin")) {
-      return HandleUpdateAdmin(req, res, next, user)
+      return HandleUpdateAdmin(req, res, next, user);
     } else if (user.role.includes("User")) {
-      return HandleUpdateUser(req, res, next, user)
+      return HandleUpdateUser(req, res, next, user);
     } else {
       return res.status(400).json({ message: "Bad Request" });
     }
-
   } catch (error) {
     next(error);
   }
-}
+};
 
 export {
   register,
@@ -337,5 +414,6 @@ export {
   forgetPassword,
   verifyOtp,
   changePassword,
-  HandleUpdateProfile
+  HandleUpdateProfile,
+  handleRegisterUser
 };

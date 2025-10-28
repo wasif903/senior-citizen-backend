@@ -10,6 +10,38 @@ const UserSchema = new Schema({
         type: String,
         unique: true,
     },
+    idCardNumber: {
+        type: String,
+        unique: true,
+    },
+    medicareNumber: {
+        type: String,
+        unique: true,
+    },
+    dob: {
+        type: String,
+    },
+    address: {
+        type: String,
+    },
+    gender: {
+        type: String,
+    },
+    bloodGroup: {
+        type: String,
+    },
+    pastInjury: {
+        type: String,
+    },
+    pastOperation: {
+        type: String,
+    },
+    medicines: {
+        type: String,
+    },
+    healthNote: {
+        type: String,
+    },
     password: String,
     role: {
         type: String,
