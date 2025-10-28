@@ -12,9 +12,11 @@ import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 // DB Connection
 import connectDB from "./config/DB.js";
 
-
 // Routes
 import AuthRoutes from "./routes/AuthRoutes.js";
+import PlanRoutes from "./routes/PlanRoutes.js";
+import WebhookRoutes from "./routes/WebhookRoutes.js";
+
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 
 dotenv.config();
@@ -26,6 +28,9 @@ app.use(SecurityHeaders);
 // === MongoDB Connection ===
 connectDB();
 
+// Stripe Webhook
+app.use("/api/stripe", WebhookRoutes);
+
 // === Global Middlewares ===
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -34,7 +39,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["POST", "GET", "PATCH", "DELETE"],
+    methods: ["POST", "GET", "PATCH", "DELETE"]
   })
 );
 
@@ -62,14 +67,13 @@ app.use(RateLimiter);
 // === Logger Middleware for logging errors
 app.use(ErrorLogger);
 
-
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "OK!" })
-})
+  res.status(200).json({ message: "OK!" });
+});
 
 // === Routes ===
 app.use("/api", AuthRoutes);
-
+app.use("/api/plans", PlanRoutes);
 
 // === Error Handler
 app.use(ErrorHandler);

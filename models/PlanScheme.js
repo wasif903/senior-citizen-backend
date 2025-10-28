@@ -1,0 +1,20 @@
+import mongoose from "mongoose";
+const { Schema } = mongoose;
+
+const PlanScheme = new Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String },
+    productId: { type: String, required: true },
+    priceId: { type: String, required: true },
+    amount: { type: Number, required: true },
+    currency: { type: String, default: "usd" },
+    interval: { type: String, default: "year" },
+    active: { type: Boolean, default: true }
+  },
+  {
+    timestamps: true
+  }
+);
+const PlanModel = mongoose.model("plans", PlanScheme);
+export default PlanModel;
