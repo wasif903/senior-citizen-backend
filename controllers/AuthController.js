@@ -9,6 +9,9 @@ import AdminModel from "../models/AdminSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
 import UserModel from "../models/UserSchema.js";
+import stripe from "../config/StripeConfig.js";
+import SubscriptionModel from "../models/SubscriptionSchema.js";
+import PlanModel from "../models/PlanScheme.js";
 
 // REGISTER
 // METHOD : POST
@@ -115,6 +118,14 @@ const handleRegisterUser = async (req, res, next) => {
     const refreshToken = generateRefreshToken(newUser);
 
     newUser.refreshToken = refreshToken;
+
+    const customerId = await stripe.customers.create({
+      email: email,
+      name: username,
+      metadata: { userId: newUser._id.toString() }
+    });
+
+    newUser.customerId = customerId.id;
     await newUser.save();
 
     const userDetails = {
@@ -186,6 +197,23 @@ const login = async (req, res, next) => {
         createdAt: user.createdAt
       };
     } else if (user.role.includes("User")) {
+      const findSubscription = await SubscriptionModel.findOne({
+        userId: user._id
+      });
+
+      let subscribedPlan;
+      if (findSubscription) {
+        const findPlan = await PlanModel.findOne({
+          _id: findSubscription.planId
+        });
+        subscribedPlan = {
+          subscription: findSubscription,
+          plan: findPlan
+        };
+      } else {
+        subscribedPlan = null;
+      }
+
       details = {
         _id: user._id,
         username: user.username,
@@ -200,7 +228,8 @@ const login = async (req, res, next) => {
         pastOperation: user.pastOperation,
         medicines: user.medicines,
         healthNote: user.healthNote,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        subscribedPlan
       };
     }
 

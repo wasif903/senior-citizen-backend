@@ -14,14 +14,16 @@ import connectDB from "./config/DB.js";
 
 // App Connection
 import { createServer } from "http";
-import ngrok from "ngrok"
+import ngrok from "ngrok";
 
 // Routes
 import AuthRoutes from "./routes/AuthRoutes.js";
 import PlanRoutes from "./routes/PlanRoutes.js";
+import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
+import { handleStripeWebhook } from "./webhooks/StripeSubscriptionWebhook.js";
 
 dotenv.config();
 
@@ -80,6 +82,7 @@ app.get("/", (req, res) => {
 // === Routes ===
 app.use("/api", AuthRoutes);
 app.use("/api/plans", PlanRoutes);
+app.use("/api/subscriptions", SubscripitonRoutes);
 
 // === Error Handler
 app.use(ErrorHandler);
@@ -99,7 +102,3 @@ httpServer.listen(PORT, async () => {
     }
   }
 });
-
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on http://localhost:${PORT}`);
-// });
