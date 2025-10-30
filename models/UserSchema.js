@@ -1,6 +1,22 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
+const SessionSchema = new Schema(
+  {
+    fcmToken: { type: String, required: true },
+    refreshToken: { type: String, required: true },
+    deviceType: {
+      type: String,
+      enum: ["web", "android", "ios"],
+      default: "web"
+    },
+    deviceName: { type: String },
+    lastActive: { type: Date, default: Date.now },
+    ipAddress: { type: String }
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     customerId: {
@@ -52,7 +68,7 @@ const UserSchema = new Schema(
       enum: ["User"],
       default: "User"
     },
-    refreshToken: String,
+    sessions: [SessionSchema],
     otp: {
       type: String
     },

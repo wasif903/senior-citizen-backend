@@ -20,6 +20,7 @@ import ngrok from "ngrok";
 import AuthRoutes from "./routes/AuthRoutes.js";
 import PlanRoutes from "./routes/PlanRoutes.js";
 import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
+import ReminderRoutes from "./routes/ReminderRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
@@ -83,6 +84,7 @@ app.get("/", (req, res) => {
 app.use("/api", AuthRoutes);
 app.use("/api/plans", PlanRoutes);
 app.use("/api/subscriptions", SubscripitonRoutes);
+app.use("/api/reminders", ReminderRoutes);
 
 // === Error Handler
 app.use(ErrorHandler);

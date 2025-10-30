@@ -83,7 +83,10 @@ const handleRegisterUser = async (req, res, next) => {
       pastOperation,
       medicines,
       healthNote,
-      password
+      password,
+      fcmToken,
+      deviceType,
+      deviceName
     } = req.body;
 
     const existingUser = await UserModel.findOne({
@@ -117,7 +120,15 @@ const handleRegisterUser = async (req, res, next) => {
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
 
-    newUser.refreshToken = refreshToken;
+    newUser.sessions = [
+      {
+        fcmToken,
+        refreshToken,
+        deviceType: deviceType || "unknown",
+        deviceName: deviceName || req.headers["user-agent"],
+        createdAt: new Date()
+      }
+    ];
 
     const customerId = await stripe.customers.create({
       email: email,
@@ -161,7 +172,7 @@ const handleRegisterUser = async (req, res, next) => {
 // ENDPOINT: /api/login
 const login = async (req, res, next) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier, password, fcmToken, deviceType, deviceName } = req.body;
 
     const user =
       (await AdminModel.findOne({
@@ -183,7 +194,19 @@ const login = async (req, res, next) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    user.refreshToken = refreshToken;
+    // 4️⃣ Save refresh token & session info
+    // Assuming user.sessions is an array of active sessions
+    if (!user.sessions) user.sessions = [];
+    const sessionData = {
+      refreshToken,
+      fcmToken: fcmToken || null,
+      deviceType: deviceType || "unknown",
+      deviceName: deviceName || "unknown",
+      createdAt: new Date()
+    };
+    user.sessions.push(sessionData);
+
+    // user.refreshToken = refreshToken;
     await user.save();
 
     let details;
@@ -260,7 +283,10 @@ const refreshToken = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.refreshToken !== token) {
+    // ✅ Check if token exists in any session
+    const session = user.sessions.find(s => s.refreshToken === token);
+
+    if (!session) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
@@ -293,7 +319,7 @@ const logout = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.refreshToken = null;
+    user.sessions = user.sessions.filter(s => s.refreshToken !== token);
     await user.save();
 
     res.status(200).json({ message: "Logged out successfully" });
