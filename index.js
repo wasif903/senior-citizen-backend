@@ -11,6 +11,7 @@ import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 
 // DB Connection
 import connectDB from "./config/DB.js";
+import admin from "./config/firebase.js"
 
 // App Connection
 import { createServer } from "http";
@@ -25,6 +26,10 @@ import WebhookRoutes from "./routes/WebhookRoutes.js";
 
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
 import { handleStripeWebhook } from "./webhooks/StripeSubscriptionWebhook.js";
+
+// Notification Cron
+import "./crons/NotificationCron.js";
+
 
 dotenv.config();
 
