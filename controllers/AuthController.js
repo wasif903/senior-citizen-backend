@@ -459,22 +459,135 @@ const HandleUpdateProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const user = await AdminModel.findById(id);
+    const user =
+      (await AdminModel.findById(id)) || (await UserModel.findById(id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    let details;
+    if (user.role === "Admin") {
+      const { username, email, password } = req.body;
+      const existingUser =
+        (await AdminModel.findOne({
+          _id: { $ne: id },
+          $or: [{ username }, { email }]
+        })) ||
+        (await UserModel.findOne({
+          _id: { $ne: id },
+          $or: [{ username }, { email }]
+        }));
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ message: "Username or email already taken" });
+      }
+      user.username = username;
+      user.email = email;
+      if (password && password !== "") {
+        user.password = await bcrypt.hash(password, 10);
+      }
+      await user.save();
 
-    if (user.role.includes("Agency")) {
-      return HandleUpdateAgency(req, res, next, user);
-    } else if (user.role.includes("Operator")) {
-      return HandleUpdateOperator(req, res, next, user);
-    } else if (user.role.includes("Admin")) {
-      return HandleUpdateAdmin(req, res, next, user);
-    } else if (user.role.includes("User")) {
-      return HandleUpdateUser(req, res, next, user);
+      details = {
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        _id: user._id,
+        createdAt: user.createdAt
+      };
+
+      return res
+        .status(200)
+        .json({ message: "Profile Updated Successfully", user: details });
+    } else if (user.role === "User") {
+      const {
+        username,
+        email,
+        idCardNumber,
+        medicareNumber,
+        dob,
+        address,
+        gender,
+        bloodGroup,
+        pastInjury,
+        pastOperation,
+        medicines,
+        healthNote,
+        password
+      } = req.body;
+
+      const existingUser =
+        (await UserModel.findOne({
+          _id: { $ne: id },
+          $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+        })) ||
+        (await AdminModel.findOne({
+          _id: { $ne: id },
+          $or: [{ username }, { email }]
+        }));
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ message: "Username or email already taken" });
+      }
+
+      user.username = username;
+      user.email = email;
+      user.idCardNumber = idCardNumber;
+      user.medicareNumber = medicareNumber;
+      user.dob = dob;
+      user.address = address;
+      user.gender = gender;
+      user.bloodGroup = bloodGroup;
+      user.pastInjury = pastInjury;
+      user.pastOperation = pastOperation;
+      user.medicines = medicines;
+      user.healthNote = healthNote;
+      if (password && password !== "") {
+        user.password = await bcrypt.hash(password, 10);
+      }
+      await user.save();
+
+      const findSubscription = await SubscriptionModel.findOne({
+        userId: user._id
+      });
+
+      let subscribedPlan;
+      if (findSubscription) {
+        const findPlan = await PlanModel.findOne({
+          _id: findSubscription.planId
+        });
+        subscribedPlan = {
+          subscription: findSubscription,
+          plan: findPlan
+        };
+      } else {
+        subscribedPlan = null;
+      }
+
+      details = {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        idCardNumber: user.idCardNumber,
+        medicareNumber: user.medicareNumber,
+        dob: user.dob,
+        address: user.address,
+        gender: user.gender,
+        bloodGroup: user.bloodGroup,
+        pastInjury: user.pastInjury,
+        pastOperation: user.pastOperation,
+        medicines: user.medicines,
+        healthNote: user.healthNote,
+        createdAt: user.createdAt,
+        subscribedPlan
+      };
+      return res
+        .status(200)
+        .json({ message: "Profile Updated Successfully", user: details });
     } else {
-      return res.status(400).json({ message: "Bad Request" });
+      res.status(400).json({ message: "Invalid Request" });
     }
   } catch (error) {
     next(error);

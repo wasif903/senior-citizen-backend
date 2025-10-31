@@ -33,6 +33,7 @@ router.post(
 );
 
 router.post("/refresh", refreshToken);
+
 router.post("/logout", logout);
 
 router.patch("/forget-password", forgetPassword);
@@ -42,5 +43,7 @@ router.patch("/verify-otp", verifyOtp);
 router.patch("/change-password", changePassword);
 
 router.get("/get-profile/:id", handleGetUserProfile);
+
+router.patch("/update-user/:id", HandleUpdateProfile);
 
 export default router;
