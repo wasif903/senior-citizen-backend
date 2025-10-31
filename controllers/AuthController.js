@@ -194,24 +194,12 @@ const login = async (req, res, next) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // 4️⃣ Save refresh token & session info
-    // Assuming user.sessions is an array of active sessions
-    if (!user.sessions) user.sessions = [];
-    const sessionData = {
-      refreshToken,
-      fcmToken: fcmToken || null,
-      deviceType: deviceType || "unknown",
-      deviceName: deviceName || "unknown",
-      createdAt: new Date()
-    };
-    user.sessions.push(sessionData);
-
-    // user.refreshToken = refreshToken;
-    await user.save();
-
     let details;
 
     if (user.role.includes("Admin")) {
+      user.refreshToken = refreshToken;
+      await user.save();
+
       details = {
         username: user.username,
         email: user.email,
@@ -220,6 +208,22 @@ const login = async (req, res, next) => {
         createdAt: user.createdAt
       };
     } else if (user.role.includes("User")) {
+      // 4️⃣ Save refresh token & session info
+      // Assuming user.sessions is an array of active sessions
+
+      if (!user.sessions) user.sessions = [];
+      const sessionData = {
+        refreshToken,
+        fcmToken: fcmToken || null,
+        deviceType: deviceType || "unknown",
+        deviceName: deviceName || "unknown",
+        createdAt: new Date()
+      };
+      user.sessions.push(sessionData);
+
+      // user.refreshToken = refreshToken;
+      await user.save();
+
       const findSubscription = await SubscriptionModel.findOne({
         userId: user._id
       });
@@ -265,7 +269,7 @@ const login = async (req, res, next) => {
 // REFRESH
 // METHOD : POST
 // ENDPOINT: /api/refresh
-const refreshToken = async (req, res) => {
+const refreshToken = async (req, res, next) => {
   const { token } = req.body;
 
   if (!token) {
@@ -283,25 +287,34 @@ const refreshToken = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ Check if token exists in any session
-    const session = user.sessions.find(s => s.refreshToken === token);
-
-    if (!session) {
-      return res.status(403).json({ message: "Invalid refresh token" });
+    if (user.role === "Admin") {
+      if (user.refreshToken === token) {
+        const accessToken = generateAccessToken(user);
+        return res.status(200).json({ accessToken });
+      } else {
+        return res.status(403).json({ message: "Invalid refresh token" });
+      }
+    } else if (user.role === "User") {
+      // ✅ Check if token exists in any session
+      const session = user.sessions.find(s => s.refreshToken === token);
+      if (!session) {
+        return res.status(403).json({ message: "Invalid refresh token" });
+      }
+      const accessToken = generateAccessToken(user);
+      return res.status(200).json({ accessToken });
+    } else {
+      res.status(400).json({ message: "Invalid Request" });
     }
-
-    const accessToken = generateAccessToken(user);
-
-    res.status(200).json({ accessToken });
   } catch (err) {
-    res.status(403).json({ message: "Invalid refresh token" });
+    // res.status(403).json({ message: "Invalid refresh token" });
+    next(err);
   }
 };
 
 // LOGOUT (Invalidate refresh token)
 // METHOD : POST
 // ENDPOINT: /api/logout
-const logout = async (req, res) => {
+const logout = async (req, res, next) => {
   const { token } = req.body;
 
   if (!token) {
@@ -318,13 +331,20 @@ const logout = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    user.sessions = user.sessions.filter(s => s.refreshToken !== token);
-    await user.save();
-
-    res.status(200).json({ message: "Logged out successfully" });
+    if (user.role === "Admin") {
+      user.refreshToken = "";
+      await user.save();
+      return res.status(200).json({ message: "Logged out successfully" });
+    } else if (user.role === "User") {
+      user.sessions = user.sessions.filter(s => s.refreshToken !== token);
+      await user.save();
+      return res.status(200).json({ message: "Logged out successfully" });
+    } else {
+      res.status(400).json({ message: "Invalid refresh token" });
+    }
   } catch (err) {
-    res.status(403).json({ message: "Invalid refresh token" });
+    // res.status(403).json({ message: "Invalid refresh token" });
+    next(err);
   }
 };
 
@@ -461,6 +481,30 @@ const HandleUpdateProfile = async (req, res, next) => {
   }
 };
 
+// GET PROFILE
+// METHOD: GET
+// ENDPOINT: /api/get-profile/:id
+const handleGetUserProfile = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const findUser =
+      (await UserModel.findById(id).select(
+        "-sessions -password -otp -otpExpire"
+      )) ||
+      (await AdminModel.findById(id).select(
+        "-password -otp -otpExpire -refreshToken"
+      ));
+
+    if (!findUser) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+
+    res.status(200).json({ user: findUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   register,
   login,
@@ -470,5 +514,6 @@ export {
   verifyOtp,
   changePassword,
   HandleUpdateProfile,
-  handleRegisterUser
+  handleRegisterUser,
+  handleGetUserProfile
 };

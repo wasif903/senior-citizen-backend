@@ -8,7 +8,8 @@ import {
   verifyOtp,
   changePassword,
   HandleUpdateProfile,
-  handleRegisterUser
+  handleRegisterUser,
+  handleGetUserProfile
 } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
 import {
@@ -39,5 +40,7 @@ router.patch("/forget-password", forgetPassword);
 router.patch("/verify-otp", verifyOtp);
 
 router.patch("/change-password", changePassword);
+
+router.get("/get-profile/:id", handleGetUserProfile);
 
 export default router;
