@@ -12,6 +12,7 @@ import UserModel from "../models/UserSchema.js";
 import stripe from "../config/StripeConfig.js";
 import SubscriptionModel from "../models/SubscriptionSchema.js";
 import PlanModel from "../models/PlanScheme.js";
+import SearchQuery from "../utils/SearchQuery.js";
 
 // REGISTER
 // METHOD : POST
@@ -468,14 +469,20 @@ const HandleUpdateProfile = async (req, res, next) => {
     let details;
     if (user.role === "Admin") {
       const { username, email, password } = req.body;
+
+      // Build dynamic $or conditions
+      const userOrConditions = [];
+      if (username) userOrConditions.push({ username });
+      if (email) userOrConditions.push({ email });
+
       const existingUser =
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: [{ username }, { email }]
+          $or: userOrConditions
         })) ||
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: [{ username }, { email }]
+          $or: userOrConditions
         }));
       if (existingUser) {
         return res
@@ -517,14 +524,21 @@ const HandleUpdateProfile = async (req, res, next) => {
         password
       } = req.body;
 
+      // Build dynamic $or conditions
+      const userOrConditions = [];
+      if (username) userOrConditions.push({ username });
+      if (email) userOrConditions.push({ email });
+      if (idCardNumber) userOrConditions.push({ idCardNumber });
+      if (medicareNumber) userOrConditions.push({ medicareNumber });
+
       const existingUser =
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+          $or: userOrConditions
         })) ||
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: [{ username }, { email }]
+          $or: userOrConditions
         }));
       if (existingUser) {
         return res
@@ -532,18 +546,18 @@ const HandleUpdateProfile = async (req, res, next) => {
           .json({ message: "Username or email already taken" });
       }
 
-      user.username = username;
-      user.email = email;
-      user.idCardNumber = idCardNumber;
-      user.medicareNumber = medicareNumber;
-      user.dob = dob;
-      user.address = address;
-      user.gender = gender;
-      user.bloodGroup = bloodGroup;
-      user.pastInjury = pastInjury;
-      user.pastOperation = pastOperation;
-      user.medicines = medicines;
-      user.healthNote = healthNote;
+      user.username = username || user.username;
+      user.email = email || user.email;
+      user.idCardNumber = idCardNumber || user.idCardNumber;
+      user.medicareNumber = medicareNumber || user.medicareNumber;
+      user.dob = dob || user.dob;
+      user.address = address || user.address;
+      user.gender = gender || user.gender;
+      user.bloodGroup = bloodGroup || user.bloodGroup;
+      user.pastInjury = pastInjury || user.pastInjury;
+      user.pastOperation = pastOperation || user.pastOperation;
+      user.medicines = medicines || user.medicines;
+      user.healthNote = healthNote || user.healthNote;
       if (password && password !== "") {
         user.password = await bcrypt.hash(password, 10);
       }
@@ -612,8 +626,145 @@ const handleGetUserProfile = async (req, res, next) => {
       return res.status(404).json({ message: "User Not Found" });
     }
 
-    res.status(200).json({ user: findUser });
+    if (findUser.role === "User") {
+      const findSubscription = await SubscriptionModel.findOne({
+        userId: findUser._id
+      });
+
+      let subscribedPlan;
+      if (findSubscription) {
+        const findPlan = await PlanModel.findOne({
+          _id: findSubscription.planId
+        });
+        subscribedPlan = {
+          subscription: findSubscription,
+          plan: findPlan
+        };
+      } else {
+        subscribedPlan = null;
+      }
+
+      const details = {
+        _id: findUser._id,
+        username: findUser.username,
+        email: findUser.email,
+        idCardNumber: findUser.idCardNumber,
+        medicareNumber: findUser.medicareNumber,
+        dob: findUser.dob,
+        address: findUser.address,
+        gender: findUser.gender,
+        bloodGroup: findUser.bloodGroup,
+        pastInjury: findUser.pastInjury,
+        pastOperation: findUser.pastOperation,
+        medicines: findUser.medicines,
+        healthNote: findUser.healthNote,
+        createdAt: findUser.createdAt,
+        subscribedPlan
+      };
+
+      return res.status(200).json({ user: details });
+    } else if (findUser.role === "Admin") {
+      return res.status(200).json({ user: findUser });
+    }
   } catch (error) {
+    next(error);
+  }
+};
+
+// GET USERS
+// METHOD: GET
+// ENDPOINT: /api/get-users
+const handleGetUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search || {};
+    const matchStage = SearchQuery(search);
+
+    const pipeline = [
+      {
+        $lookup: {
+          from: "subscriptions",
+          localField: "_id",
+          foreignField: "userId",
+          as: "subscription"
+        }
+      },
+      {
+        $unwind: {
+          path: "$subscription",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      {
+        $lookup: {
+          from: "plans",
+          localField: "subscription.planId",
+          foreignField: "_id",
+          as: "plan"
+        }
+      },
+
+      {
+        $unwind: {
+          path: "$plan",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          username: 1,
+          email: 1,
+          username: 1,
+          email: 1,
+          idCardNumber: 1,
+          medicareNumber: 1,
+          dob: 1,
+          address: 1,
+          gender: 1,
+          bloodGroup: 1,
+          pastInjury: 1,
+          pastOperation: 1,
+          medicines: 1,
+          healthNote: 1,
+          createdAt: 1,
+          subscription: 1,
+          plan: 1
+        }
+      }
+    ];
+
+    if (matchStage) pipeline.push(matchStage);
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+
+    const users = await UserModel.aggregate(pipeline);
+
+    const countPipeline = [];
+    if (matchStage) countPipeline.push(matchStage);
+    countPipeline.push({ $count: "totalItems" });
+
+    const countResult = await UserModel.aggregate(countPipeline);
+    const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.status(200).json({
+      users,
+      meta: {
+        totalItems,
+        totalPages,
+        page,
+        limit
+      }
+    });
+  } catch (error) {
+    console.log(error);
     next(error);
   }
 };
@@ -628,5 +779,6 @@ export {
   changePassword,
   HandleUpdateProfile,
   handleRegisterUser,
-  handleGetUserProfile
+  handleGetUserProfile,
+  handleGetUsers
 };

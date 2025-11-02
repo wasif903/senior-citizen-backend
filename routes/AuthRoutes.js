@@ -9,7 +9,8 @@ import {
   changePassword,
   HandleUpdateProfile,
   handleRegisterUser,
-  handleGetUserProfile
+  handleGetUserProfile,
+  handleGetUsers
 } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
 import {
@@ -45,5 +46,7 @@ router.patch("/change-password", changePassword);
 router.get("/get-profile/:id", handleGetUserProfile);
 
 router.patch("/update-user/:id", HandleUpdateProfile);
+
+router.get("/get-users", handleGetUsers);
 
 export default router;
