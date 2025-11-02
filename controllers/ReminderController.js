@@ -1,6 +1,10 @@
 import ReminderModel from "../models/ReminderSchema.js";
 import UserModel from "../models/UserSchema.js";
+import SearchQuery from "../utils/SearchQuery.js";
 
+// CREATE REMINDERS
+// METHOD: POST
+// ENDPOINT:  /api/reminders/userId/create-plans
 const handleCreateReminder = async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -61,4 +65,49 @@ const handleCreateReminder = async (req, res, next) => {
   }
 };
 
-export { handleCreateReminder };
+// GET REMINDERS
+// METHOD: GET
+// ENDPOINT: /api/reminders/userId/get-reminders
+const handleGetReminders = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search || {};
+    const matchStage = SearchQuery(search);
+
+    const pipeline = [];
+
+    if (matchStage) pipeline.push(matchStage);
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+
+    const reminders = await ReminderModel.aggregate(pipeline);
+
+    const countPipeline = [];
+    if (matchStage) countPipeline.push(matchStage);
+    countPipeline.push({ $count: "totalItems" });
+
+    const countResult = await ReminderModel.aggregate(countPipeline);
+    const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.status(200).json({
+      reminders,
+      meta: {
+        totalItems,
+        totalPages,
+        page,
+        limit
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export { handleCreateReminder, handleGetReminders };

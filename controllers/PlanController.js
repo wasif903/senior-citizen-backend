@@ -3,6 +3,10 @@ import PlanModel from "../models/PlanScheme.js";
 import stripe from "../config/StripeConfig.js";
 import SearchQuery from "../utils/SearchQuery.js";
 
+
+// CREATE PLANS
+// METHOD: POST
+// ENDPOINT:  /api/plans/create-plans
 const createProductAndPrice = async (req, res, next) => {
   try {
     const { title, amount, description } = req.body;
@@ -54,6 +58,9 @@ const createProductAndPrice = async (req, res, next) => {
   }
 };
 
+// GET PLANS
+// METHOD: GET
+// ENDPOINT:  /api/plans/get-plans
 const handleGetPlans = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
