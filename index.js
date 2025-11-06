@@ -82,7 +82,7 @@ app.use(RateLimiter);
 app.use(ErrorLogger);
 
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "OK!" });
+  res.status(200).json({ message: "Live!" });
 });
 
 // === Routes ===
