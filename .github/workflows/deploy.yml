@@ -30,4 +30,4 @@ jobs:
           script: |
             cd /root/senior-citizen-backend
             npm install --production
-            pm2 restart senior-citizen-backend || pm2 start server.js --name senior-citizen-backend
+            pm2 restart senior-citizen-backend || pm2 start index.js --name senior-citizen-backend
