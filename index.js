@@ -92,6 +92,7 @@ app.use("/api/subscriptions", SubscripitonRoutes);
 app.use("/api/reminders", ReminderRoutes);
 
 // === Error Handler
+
 app.use(ErrorHandler);
 
 // === Server Start ===
