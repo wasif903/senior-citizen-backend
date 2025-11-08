@@ -261,7 +261,14 @@ const login = async (req, res, next) => {
       };
     }
 
-    res.status(200).json({ accessToken, refreshToken, user: details });
+    res
+      .status(200)
+      .json({
+        message: "Logged In Successfully",
+        accessToken,
+        refreshToken,
+        user: details
+      });
   } catch (err) {
     next(err);
   }
