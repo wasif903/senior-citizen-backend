@@ -107,3 +107,20 @@ if (paymentIntentId) {
     res.status(500).json({ message: "Failed to create subscription", error });
   }
 };
+
+
+export const HandleGetPaymentIntent = async (req, res) => {
+  try {
+      const paymentIntent = await stripe.paymentIntents.create({
+          amount: req.body.amount * 100,
+          currency: 'usd',
+          automatic_payment_methods: {
+              enabled: true
+          }
+      })
+      res.status(200).json({ getPaymentIntent: paymentIntent.client_secret });
+  } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+}
