@@ -39,18 +39,13 @@ const buildMatchCondition = (key, value) => {
   // Objects (operators or elemMatch)
   if (typeof value === "object" && value !== null) {
     const hasOperator = Object.keys(value).some(k => k.startsWith("$"));
-    console.log(hasOperator);
-    console.log({ [key]: new Date(value) });
     if (hasOperator) {
       const normalized = {};
       for (const [op, val] of Object.entries(value)) {
         let v = val;
-
-        // Fix common ISO formatting issue (space instead of +)
         if (typeof v === "string") {
           v = v.replace(" ", "+");
         }
-
         const parsed = new Date(v);
         normalized[op] = isNaN(parsed.getTime()) ? v : parsed;
       }
