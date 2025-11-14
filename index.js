@@ -8,6 +8,7 @@ import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
 import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
+import qs from "qs";
 
 // DB Connection
 import connectDB from "./config/DB.js";
@@ -38,6 +39,8 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
+
+app.set('query parser', 'extended');
 
 // === MongoDB Connection ===
 connectDB();
