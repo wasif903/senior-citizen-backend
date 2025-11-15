@@ -2,6 +2,7 @@ import admin from "../config/firebase.js";
 import cron from "node-cron";
 import ReminderModel from "../models/ReminderSchema.js";
 import UserModel from "../models/UserSchema.js";
+import AnnouncementModel from "../models/AnnouncementSchema.js";
 
 // Run every minute
 cron.schedule("* * * * *", async () => {
@@ -61,6 +62,64 @@ cron.schedule("* * * * *", async () => {
   console.log(`[${new Date().toISOString()}] Cron job finished`);
 });
 
+cron.schedule("* * * * *", async () => {
+  const now = new Date();
+  console.log(`\n[${now.toISOString()}] Announcement cron started`);
+
+  try {
+    // Get today’s date only (ignore time)
+    const today = new Date(now.toISOString().split("T")[0]);
+
+    // Define today's range (00:00 to 23:59)
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+
+    // Find announcements that start today and are not already sent
+    const announcements = await AnnouncementModel.find({
+      announcementTimeStart: { $gte: startOfDay, $lte: endOfDay },
+      sent: { $ne: true } // optional if you add a "sent" field
+    });
+
+    if (!announcements.length) {
+      console.log(`[${now.toISOString()}] No announcements scheduled for today`);
+      return;
+    }
+
+    console.log(`[${now.toISOString()}] Found ${announcements.length} announcements for today`);
+
+    // Fetch all users with active sessions (you can filter roles if needed)
+    const users = await UserModel.find({ "sessions.fcmToken": { $exists: true, $ne: "" } });
+
+    for (const announcement of announcements) {
+      console.log(`Sending announcement "${announcement.title}" to ${users.length} users`);
+
+      // Send push notification to each user session
+      for (const user of users) {
+        for (const session of user.sessions) {
+          if (session.fcmToken) {
+            await sendPushNotification(session.fcmToken, {
+              title: announcement.title,
+              body: announcement.desc,
+              data: { type: "announcement", id: announcement._id.toString() }
+            });
+          }
+        }
+      }
+
+      // Mark announcement as sent (optional)
+      announcement.sent = true;
+      await announcement.save();
+
+      console.log(`Announcement "${announcement.title}" sent successfully.`);
+    }
+
+    console.log(`[${new Date().toISOString()}] Announcement cron finished`);
+  } catch (error) {
+    console.error("Error in announcement cron:", error.message);
+  }
+});
+
+
 function convertToMinutes(str) {
   if (!str) return 0;
   const num = parseInt(str);
@@ -71,6 +130,7 @@ function convertToMinutes(str) {
 
 async function sendPushNotification(token, reminder) {
   try {
+    console.log(reminder)
     await admin.messaging().send({
       token,
       notification: {
@@ -78,7 +138,7 @@ async function sendPushNotification(token, reminder) {
         body: `Your appointment is at ${new Date(reminder.appointmentDate).toLocaleTimeString()}.`,
       },
       data: {
-        reminderId: reminder._id.toString(),
+        reminderId: String(reminder._id),
         type: "reminder",
       },
     });

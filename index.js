@@ -8,10 +8,11 @@ import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
 import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
+import qs from "qs";
 
 // DB Connection
 import connectDB from "./config/DB.js";
-import admin from "./config/firebase.js"
+import admin from "./config/firebase.js";
 
 // App Connection
 import { createServer } from "http";
@@ -22,6 +23,7 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import PlanRoutes from "./routes/PlanRoutes.js";
 import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
 import ReminderRoutes from "./routes/ReminderRoutes.js";
+import AnnouncementRoutes from "./routes/AnnouncementRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
 import { allowedOrigins } from "./utils/AllowedOrigins.js";
@@ -30,7 +32,6 @@ import { handleStripeWebhook } from "./webhooks/StripeSubscriptionWebhook.js";
 // Notification Cron
 import "./crons/NotificationCron.js";
 
-
 dotenv.config();
 
 const app = express();
@@ -38,6 +39,8 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
+
+app.set('query parser', 'extended');
 
 // === MongoDB Connection ===
 connectDB();
@@ -90,6 +93,7 @@ app.use("/api", AuthRoutes);
 app.use("/api/plans", PlanRoutes);
 app.use("/api/subscriptions", SubscripitonRoutes);
 app.use("/api/reminders", ReminderRoutes);
+app.use("/api/announcement", AnnouncementRoutes);
 
 // === Error Handler
 
