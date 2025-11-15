@@ -96,17 +96,23 @@ app.use("/api/reminders", ReminderRoutes);
 app.use(ErrorHandler);
 
 // === Server Start ===
+// const PORT = process.env.PORT || 5000;
+
+// httpServer.listen(PORT, async () => {
+//   console.log(`Server running on http://localhost:${PORT}`);
+
+//   if (process.env.USE_NGROK === "true") {
+//     try {
+//       const url = await ngrok.connect(PORT);
+//       console.log(`ngrok tunnel: ${url}`);
+//     } catch (err) {
+//       console.error("Failed to start ngrok:", err);
+//     }
+//   }
+// });
+
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-
-  if (process.env.USE_NGROK === "true") {
-    try {
-      const url = await ngrok.connect(PORT);
-      console.log(`ngrok tunnel: ${url}`);
-    } catch (err) {
-      console.error("Failed to start ngrok:", err);
-    }
-  }
+app.listen(PORT, () => {
+ console.log("Server Running")
 });
