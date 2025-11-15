@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ReminderModel from "../models/ReminderSchema.js";
 import UserModel from "../models/UserSchema.js";
 import SearchQuery from "../utils/SearchQuery.js";
@@ -74,10 +75,17 @@ const handleGetReminders = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const { userId } = req.params;
+
     const search = req.query.search || {};
     const matchStage = SearchQuery(search);
 
     const pipeline = [
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId)
+        }
+      },
       {
         $lookup: {
           from: "users",
@@ -136,7 +144,13 @@ const handleGetReminders = async (req, res, next) => {
 
     const reminders = await ReminderModel.aggregate(pipeline);
 
-    const countPipeline = [];
+    const countPipeline = [
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId)
+        }
+      }
+    ];
     if (matchStage) countPipeline.push(matchStage);
     countPipeline.push({ $count: "totalItems" });
 
