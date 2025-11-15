@@ -77,7 +77,56 @@ const handleGetReminders = async (req, res, next) => {
     const search = req.query.search || {};
     const matchStage = SearchQuery(search);
 
-    const pipeline = [];
+    const pipeline = [
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "users"
+        }
+      },
+      {
+        $unwind: {
+          path: "$users",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          doctorName: 1,
+          appointmentDate: 1,
+          remindBefore: 1,
+          recurringReminder: 1,
+          recurringRemindBefore: 1,
+          note: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          users: {
+            _id: 1,
+            username: 1,
+            email: 1,
+            idCardNumber: 1,
+            medicareNumber: 1,
+            dob: 1,
+            address: 1,
+            gender: 1,
+            bloodGroup: 1,
+            pastInjury: 1,
+            pastOperation: 1,
+            medicines: 1,
+            healthNote: 1,
+            password: 1,
+            role: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            customerId: 1
+          }
+        }
+      }
+    ];
 
     if (matchStage) pipeline.push(matchStage);
     pipeline.push({ $sort: { createdAt: -1 } });
