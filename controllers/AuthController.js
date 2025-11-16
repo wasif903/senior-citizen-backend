@@ -475,7 +475,7 @@ const HandleUpdateProfile = async (req, res, next) => {
     }
     let details;
     if (user.role === "Admin") {
-      const { username, email, password } = req.body;
+      const { username, email, password, newPass } = req.body;
 
       // Build dynamic $or conditions
       const userOrConditions = [];
@@ -498,8 +498,12 @@ const HandleUpdateProfile = async (req, res, next) => {
       }
       user.username = username;
       user.email = email;
-      if (password && password !== "") {
-        user.password = await bcrypt.hash(password, 10);
+      if (password && password !== "" && newPass && newPass !== "") {
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+          return res.status(400).json({message: "Password is Incorrect"});
+        }
+        user.password = await bcrypt.hash(newPass, 10);
       }
       await user.save();
 
