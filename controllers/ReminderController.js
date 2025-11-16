@@ -135,7 +135,6 @@ const handleGetReminders = async (req, res, next) => {
               pastOperation: 1,
               medicines: 1,
               healthNote: 1,
-              password: 1,
               role: 1,
               createdAt: 1,
               updatedAt: 1,

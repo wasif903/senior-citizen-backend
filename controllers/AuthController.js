@@ -13,6 +13,7 @@ import stripe from "../config/StripeConfig.js";
 import SubscriptionModel from "../models/SubscriptionSchema.js";
 import PlanModel from "../models/PlanScheme.js";
 import SearchQuery from "../utils/SearchQuery.js";
+import ReminderModel from "../models/ReminderSchema.js";
 
 // REGISTER
 // METHOD : POST
@@ -261,14 +262,12 @@ const login = async (req, res, next) => {
       };
     }
 
-    res
-      .status(200)
-      .json({
-        message: "Logged In Successfully",
-        accessToken,
-        refreshToken,
-        user: details
-      });
+    res.status(200).json({
+      message: "Logged In Successfully",
+      accessToken,
+      refreshToken,
+      user: details
+    });
   } catch (err) {
     next(err);
   }
@@ -501,7 +500,7 @@ const HandleUpdateProfile = async (req, res, next) => {
       if (password && password !== "" && newPass && newPass !== "") {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-          return res.status(400).json({message: "Password is Incorrect"});
+          return res.status(400).json({ message: "Password is Incorrect" });
         }
         user.password = await bcrypt.hash(newPass, 10);
       }
@@ -780,6 +779,67 @@ const handleGetUsers = async (req, res, next) => {
   }
 };
 
+// GET DASHBOARD API
+// METHOD: GET
+// ENDPOINT: /api/:adminID/dashboard
+const handleGetAdminDashboard = async (req, res, next) => {
+  try {
+    const { adminID } = req.params;
+
+    const findAdmin = await AdminModel.findById(adminID);
+    if (!findAdmin) {
+      return res.status(400).json({ message: "Invalid params" });
+    }
+
+    // Total Users
+    const totalUserPipeline = [{ $count: "totalItems" }];
+    const totalUserCountRes = await UserModel.aggregate(totalUserPipeline);
+    const totalUsers =
+      totalUserCountRes.length > 0 ? totalUserCountRes[0].totalItems : 0;
+
+    // Total Pricing Plans
+    const totalPlanPipeline = [{ $count: "totalItems" }];
+    const totalPlanCountRes = await PlanModel.aggregate(totalPlanPipeline);
+    const totalPlans =
+      totalPlanCountRes.length > 0 ? totalPlanCountRes[0].totalItems : 0;
+
+    // Upcoming Reminders
+    const currDateTime = new Date();
+    const totalUpcomingReminders = [
+      {
+        $match: {
+          appointmentDate: {
+            $gte: currDateTime
+          }
+        }
+      },
+      { $count: "totalItems" }
+    ];
+    const totalUpcomingRemindersCount = await ReminderModel.aggregate(
+      totalUpcomingReminders
+    );
+    const UpcomingReminders =
+      totalUpcomingRemindersCount.length > 0
+        ? totalUpcomingRemindersCount[0].totalItems
+        : 0;
+
+    // Total Reminders
+    const totalReminders = [{ $count: "totalItems" }];
+    const totalRemindersCount = await ReminderModel.aggregate(totalReminders);
+    const Reminders =
+      totalRemindersCount.length > 0 ? totalRemindersCount[0].totalItems : 0;
+
+    res.status(200).json({
+      totalUsers: totalUsers,
+      totalPlans: totalPlans,
+      UpcomingReminders,
+      totalReminders: Reminders
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export {
   register,
   login,
@@ -791,5 +851,6 @@ export {
   HandleUpdateProfile,
   handleRegisterUser,
   handleGetUserProfile,
-  handleGetUsers
+  handleGetUsers,
+  handleGetAdminDashboard
 };
