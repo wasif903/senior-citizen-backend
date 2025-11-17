@@ -15,11 +15,11 @@ const SubscriptionSchema = new Schema(
     },
     stripeSubscriptionId: {
       type: String,
-      required: true
+      default: ""
     },
     stripeCustomerId: {
       type: String, // 👈 add this field for reference
-      required: true
+      default: ""
     },
     status: {
       type: String,

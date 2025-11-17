@@ -3,53 +3,149 @@ import PlanModel from "../models/PlanScheme.js";
 import stripe from "../config/StripeConfig.js";
 import SearchQuery from "../utils/SearchQuery.js";
 
-
 // CREATE PLANS
 // METHOD: POST
 // ENDPOINT:  /api/plans/create-plans
+// const createProductAndPrice = async (req, res, next) => {
+//   try {
+//     const { title, amount, description, planPoints } = req.body;
+
+//     // ✅ Validate input
+//     if (!title || !amount) {
+//       return res
+//         .status(400)
+//         .json({ message: "Title and amount are required fields." });
+//     }
+
+//     if (!Array.isArray(planPoints)) {
+//       return res.status(400).json({ message: "Plan Points Must Be An Array" });
+//     }
+
+//     // ✅ Convert amount to cents
+//     const unitAmount = Math.round(amount * 100);
+
+//     // ✅ Create product on Stripe
+//     const product = await stripe.products.create({
+//       name: title,
+//       description
+//     });
+
+//     // ✅ Create yearly recurring price
+//     const price = await stripe.prices.create({
+//       unit_amount: unitAmount,
+//       currency: "usd",
+//       recurring: { interval: "year" },
+//       product: product.id
+//     });
+
+//     // ✅ Save to MongoDB
+//     const plan = new PlanModel({
+//       title,
+//       description,
+//       planPoints,
+//       productId: product.id,
+//       priceId: price.id,
+//       amount: amount,
+//       currency: price.currency,
+//       interval: price.recurring.interval
+//     });
+
+//     await plan.save();
+
+//     res.status(201).json({
+//       message: "Product and yearly price created successfully",
+//       plan
+//     });
+//   } catch (error) {
+//     console.error("Stripe Error:", error);
+//     next(error);
+//   }
+// };
+
 const createProductAndPrice = async (req, res, next) => {
   try {
-    const { title, amount, description } = req.body;
+    const { title, amount, description, planPoints, interval } = req.body;
 
-    // ✅ Validate input
-    if (!title || !amount) {
+    // Validate input
+    if (!title || amount === undefined || amount === null) {
       return res
         .status(400)
         .json({ message: "Title and amount are required fields." });
     }
 
-    // ✅ Convert amount to cents
+    if (!Array.isArray(planPoints)) {
+      return res.status(400).json({ message: "Plan Points Must Be An Array" });
+    }
+
+    let product = null;
+    let price = null;
+
+    // --------------------------------------------
+    //  ✅ Handle FREE PLAN (amount === 0)
+    // --------------------------------------------
+    if (amount === 0) {
+      // No Stripe product or price created
+
+      const plan = new PlanModel({
+        title,
+        description,
+        planPoints,
+        amount: 0,
+        currency: "usd",
+        interval: null,
+        productId: null,
+        priceId: null
+      });
+
+      await plan.save();
+
+      return res.status(201).json({
+        message: "Free plan created successfully",
+        plan
+      });
+    }
+
+    // --------------------------------------------
+    //  ✅ PAID PLAN (amount > 0)
+    // --------------------------------------------
+
+    if (!["month", "year"].includes(interval)) {
+      return res.status(400).json({ message: "Invalid Interval Type" });
+    }
+
+    // Convert to cents
     const unitAmount = Math.round(amount * 100);
 
-    // ✅ Create product on Stripe
-    const product = await stripe.products.create({
+    // Create product on Stripe
+    product = await stripe.products.create({
       name: title,
       description
     });
 
-    // ✅ Create yearly recurring price
-    const price = await stripe.prices.create({
+    // Create yearly price on Stripe
+    price = await stripe.prices.create({
       unit_amount: unitAmount,
       currency: "usd",
-      recurring: { interval: "year" },
+      recurring: { interval: interval },
       product: product.id
     });
 
-    // ✅ Save to MongoDB
+    // Save to DB
     const plan = new PlanModel({
       title,
       description,
+      planPoints,
       productId: product.id,
       priceId: price.id,
-      amount: amount,
+      amount,
       currency: price.currency,
       interval: price.recurring.interval
     });
 
     await plan.save();
 
-    res.status(201).json({
-      message: "Product and yearly price created successfully",
+    return res.status(201).json({
+      message: "Paid plan created successfully",
       plan
     });
   } catch (error) {
@@ -72,7 +168,21 @@ const handleGetPlans = async (req, res, next) => {
 
     const pipeline = [];
 
-    if (matchStage) pipeline.push(matchStage);
+    // if (matchStage) pipeline.push(matchStage);
+
+    if (matchStage) {
+      const conditions = matchStage.$match || {};
+      pipeline.push({
+        $match: {
+          $or: [conditions, { amount: 0 }]
+        }
+      });
+    } else {
+      pipeline.push({
+        $match: { amount: 0 }
+      });
+    }
+
     pipeline.push({ $sort: { createdAt: -1 } });
 
     pipeline.push({ $skip: skip });

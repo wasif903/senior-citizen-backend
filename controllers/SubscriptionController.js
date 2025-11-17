@@ -5,11 +5,115 @@ import PlanModel from "../models/PlanScheme.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// export const handleCreateSubscription = async (req, res) => {
+//   try {
+//     const { userId, planId, priceId, email, paymentMethodId, token } = req.body;
+
+//     if (!userId || !planId || !priceId || !email) {
+//       return res.status(400).json({ message: "Missing required fields" });
+//     }
+
+//     const findUser = await UserModel.findById(userId);
+//     if (!findUser) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     const findPlan = await PlanModel.findById(planId);
+//     if (!findPlan) {
+//         return res.status(404).json({ message: "Plan not found" });
+//     }
+
+//     console.log(findUser.customerId, "customerId");
+
+//     // 1️⃣ Create or get Stripe customer
+//     let customerId = findUser.customerId;
+//     if (!customerId) {
+//       const customer = await stripe.customers.create({ email });
+//       findUser.customerId = customer.id;
+//       await findUser.save();
+//       customerId = customer.id;
+//     }
+
+//     // 2️⃣ Create Payment Method (using token instead of card)
+//     let finalPaymentMethodId = paymentMethodId;
+//     if (!finalPaymentMethodId && token) {
+//       // Convert token (e.g., tok_visa) into a payment method
+//       const paymentMethod = await stripe.paymentMethods.create({
+//         type: "card",
+//         card: { token } // 👈 use token here
+//       });
+//       console.log(paymentMethod.id, "---");
+//       finalPaymentMethodId = paymentMethod.id;
+//     }
+
+//     // 3️⃣ Attach the Payment Method to the Customer
+//     await stripe.paymentMethods.attach(finalPaymentMethodId, {
+//       customer: customerId
+//     });
+
+//     // 4️⃣ Set as Default Payment Method
+//     await stripe.customers.update(customerId, {
+//       invoice_settings: { default_payment_method: finalPaymentMethodId }
+//     });
+
+//     // 5️⃣ Create Subscription
+//     const subscription = await stripe.subscriptions.create({
+//       customer: customerId,
+//       items: [{ price: priceId }],
+//       default_payment_method: finalPaymentMethodId,
+//       payment_behavior: "allow_incomplete",
+//       expand: ["latest_invoice.payment_intent"],
+//       metadata: { userId, planId }
+//     });
+// // Confirm the payment intent manually
+// const paymentIntentId = subscription.latest_invoice.payment_intent?.id;
+
+// if (paymentIntentId) {
+//   const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
+//     payment_method: paymentMethodId,
+//   });
+
+//   console.log("✅ Payment confirmed:", confirmedPaymentIntent.status);
+// } else {
+//   console.log("⚠️ No payment intent found yet");
+// }
+
+//     // await stripe.paymentIntents.confirm(paymentIntent.id);
+
+//     // 6️⃣ Save in DB
+//     await SubscriptionModel.create({
+//       userId,
+//       planId,
+//       stripeSubscriptionId: subscription.id,
+//       stripeCustomerId: findUser.customerId,
+//       status: subscription.status,
+//       startDate: subscription.start_date
+//         ? new Date(subscription.start_date * 1000)
+//         : null,
+//       currentPeriodEnd: new Date(
+//         subscription.items.data[0].current_period_end * 1000
+//       )
+//     });
+
+//     console.log("✅ Subscription created successfully:", subscription.id);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Subscription created successfully",
+//       subscription
+//     });
+//   } catch (error) {
+//     console.error("❌ Error creating subscription:", error);
+//     res.status(500).json({ message: "Failed to create subscription", error });
+//   }
+// };
+
+
 export const handleCreateSubscription = async (req, res) => {
   try {
     const { userId, planId, priceId, email, paymentMethodId, token } = req.body;
 
-    if (!userId || !planId || !priceId || !email) {
+    if (!userId || !planId || !email) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -20,10 +124,40 @@ export const handleCreateSubscription = async (req, res) => {
 
     const findPlan = await PlanModel.findById(planId);
     if (!findPlan) {
-        return res.status(404).json({ message: "Plan not found" });
+      return res.status(404).json({ message: "Plan not found" });
     }
 
-    console.log(findUser.customerId, "customerId");
+    console.log(findPlan)
+
+    // ============================================
+    //         🆓 FREE PLAN HANDLING
+    // ============================================
+    if (findPlan.amount === 0) {
+      // Directly activate free plan — NO Stripe involved
+      const subscription = await SubscriptionModel.create({
+        userId,
+        planId,
+        status: "active",
+        stripeSubscriptionId: null,
+        stripeCustomerId: findUser.customerId || null,
+        startDate: new Date(),
+        currentPeriodEnd: null // free plan does not expire
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Free plan activated successfully",
+        subscription
+      });
+    }
+
+    // ============================================
+    //         💳 PAID PLAN HANDLING
+    // ============================================
+
+    if (!priceId) {
+      return res.status(400).json({ message: "priceId is required for paid plans" });
+    }
 
     // 1️⃣ Create or get Stripe customer
     let customerId = findUser.customerId;
@@ -37,16 +171,14 @@ export const handleCreateSubscription = async (req, res) => {
     // 2️⃣ Create Payment Method (using token instead of card)
     let finalPaymentMethodId = paymentMethodId;
     if (!finalPaymentMethodId && token) {
-      // Convert token (e.g., tok_visa) into a payment method
       const paymentMethod = await stripe.paymentMethods.create({
         type: "card",
-        card: { token } // 👈 use token here
+        card: { token }
       });
-      console.log(paymentMethod.id, "---");
       finalPaymentMethodId = paymentMethod.id;
     }
 
-    // 3️⃣ Attach the Payment Method to the Customer
+    // 3️⃣ Attach Payment Method
     await stripe.paymentMethods.attach(finalPaymentMethodId, {
       customer: customerId
     });
@@ -56,7 +188,7 @@ export const handleCreateSubscription = async (req, res) => {
       invoice_settings: { default_payment_method: finalPaymentMethodId }
     });
 
-    // 5️⃣ Create Subscription
+    // 5️⃣ Create Subscription in Stripe
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -65,23 +197,17 @@ export const handleCreateSubscription = async (req, res) => {
       expand: ["latest_invoice.payment_intent"],
       metadata: { userId, planId }
     });
-// Confirm the payment intent manually
-const paymentIntentId = subscription.latest_invoice.payment_intent?.id;
 
-if (paymentIntentId) {
-  const confirmedPaymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
-    payment_method: paymentMethodId,
-  });
+    // 6️⃣ Confirm payment
+    const paymentIntentId = subscription.latest_invoice.payment_intent?.id;
+    if (paymentIntentId) {
+      await stripe.paymentIntents.confirm(paymentIntentId, {
+        payment_method: finalPaymentMethodId,
+      });
+    }
 
-  console.log("✅ Payment confirmed:", confirmedPaymentIntent.status);
-} else {
-  console.log("⚠️ No payment intent found yet");
-}
-
-    // await stripe.paymentIntents.confirm(paymentIntent.id);
-
-    // 6️⃣ Save in DB
-    await SubscriptionModel.create({
+    // 7️⃣ Save subscription in DB
+    const savedSubscription = await SubscriptionModel.create({
       userId,
       planId,
       stripeSubscriptionId: subscription.id,
@@ -89,24 +215,24 @@ if (paymentIntentId) {
       status: subscription.status,
       startDate: subscription.start_date
         ? new Date(subscription.start_date * 1000)
-        : null,
+        : new Date(),
       currentPeriodEnd: new Date(
         subscription.items.data[0].current_period_end * 1000
       )
     });
 
-    console.log("✅ Subscription created successfully:", subscription.id);
-
     return res.status(200).json({
       success: true,
       message: "Subscription created successfully",
-      subscription
+      subscription: savedSubscription
     });
+
   } catch (error) {
     console.error("❌ Error creating subscription:", error);
     res.status(500).json({ message: "Failed to create subscription", error });
   }
 };
+
 
 
 export const HandleGetPaymentIntent = async (req, res) => {

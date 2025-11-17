@@ -5,8 +5,9 @@ const PlanScheme = new Schema(
   {
     title: { type: String, required: true },
     description: { type: String },
-    productId: { type: String, required: true },
-    priceId: { type: String, required: true },
+    planPoints: { type: Array, default: [] },
+    productId: { type: String, default: "" },
+    priceId: { type: String, default: "" },
     amount: { type: Number, required: true },
     currency: { type: String, default: "usd" },
     interval: { type: String, default: "year" },
