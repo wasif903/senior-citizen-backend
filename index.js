@@ -40,7 +40,7 @@ const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
 
-app.set('query parser', 'extended');
+app.set("query parser", "extended");
 
 // === MongoDB Connection ===
 connectDB();
@@ -115,8 +115,30 @@ app.use(ErrorHandler);
 //   }
 // });
 
+async function sendPushNotification(token, reminder) {
+  try {
+    console.log(reminder);
+    await admin.messaging().send({
+      token:
+        "cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw",
+      notification: {
+        title: `Reminder`,
+        body: `Your appointment is at`
+      },
+      data: {
+        type: "reminder"
+      }
+    });
+    console.log(
+      `Notification sent to token ${"cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw"}`
+    );
+  } catch (err) {
+    console.error("Error sending notification:", err.message);
+  }
+}
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
- console.log("Server Running")
+  console.log("Server Running");
 });
