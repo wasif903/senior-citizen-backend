@@ -30,6 +30,10 @@ const UserSchema = new Schema(
       type: String,
       unique: true
     },
+    contactNumer: {
+      type: String,
+      unique: true
+    },
     idCardNumber: {
       type: String,
       unique: true
@@ -71,6 +75,10 @@ const UserSchema = new Schema(
     sessions: [SessionSchema],
     otp: {
       type: String
+    },
+    medicare: {
+      type: String,
+      required: true
     },
     otpExpire: {
       type: Date

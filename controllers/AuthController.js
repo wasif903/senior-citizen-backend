@@ -14,7 +14,7 @@ import SubscriptionModel from "../models/SubscriptionSchema.js";
 import PlanModel from "../models/PlanScheme.js";
 import SearchQuery from "../utils/SearchQuery.js";
 import ReminderModel from "../models/ReminderSchema.js";
-
+import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/register
@@ -88,8 +88,17 @@ const handleRegisterUser = async (req, res, next) => {
       password,
       fcmToken,
       deviceType,
+      contactNumer,
       deviceName
     } = req.body;
+
+    const medicareFile = req?.files?.medicareFile?.[0];
+
+    if (!medicareFile) {
+      return res.status(400).json({message: "Medicare File is required!"})
+    }
+    
+    const extractPath = ExtractRelativeFilePath(medicareFile)
 
     const existingUser = await UserModel.findOne({
       $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
@@ -105,6 +114,7 @@ const handleRegisterUser = async (req, res, next) => {
     const newUser = new UserModel({
       username,
       email,
+      contactNumer,
       idCardNumber,
       medicareNumber,
       dob,
@@ -115,6 +125,7 @@ const handleRegisterUser = async (req, res, next) => {
       pastOperation,
       medicines,
       healthNote,
+      medicare: extractPath,
       password: hashedPassword
     });
     await newUser.save();
