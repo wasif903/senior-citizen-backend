@@ -88,7 +88,7 @@ const handleRegisterUser = async (req, res, next) => {
       password,
       fcmToken,
       deviceType,
-      contactNumer,
+      contactNumber,
       deviceName
     } = req.body;
 
@@ -114,7 +114,7 @@ const handleRegisterUser = async (req, res, next) => {
     const newUser = new UserModel({
       username,
       email,
-      contactNumer,
+      contactNumber,
       idCardNumber,
       medicareNumber,
       dob,
@@ -157,6 +157,8 @@ const handleRegisterUser = async (req, res, next) => {
       username: newUser.username,
       email: newUser.email,
       idCardNumber: newUser.idCardNumber,
+      contactNumber: newUser.contactNumber,
+      medicare: newUser.medicare,
       medicareNumber: newUser.medicareNumber,
       dob: newUser.dob,
       address: newUser.address,
@@ -744,6 +746,8 @@ const handleGetUsers = async (req, res, next) => {
           email: 1,
           idCardNumber: 1,
           medicareNumber: 1,
+          contactNumber: 1,
+          medicare: 1,
           dob: 1,
           address: 1,
           gender: 1,
