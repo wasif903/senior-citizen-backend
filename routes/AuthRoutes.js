@@ -11,7 +11,8 @@ import {
   handleRegisterUser,
   handleGetUserProfile,
   handleGetUsers,
-  handleGetAdminDashboard
+  handleGetAdminDashboard,
+  handleUpdatePassword
 } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
 import {
@@ -59,6 +60,8 @@ router.get("/get-profile/:id", handleGetUserProfile);
 router.patch("/update-user/:id", HandleUpdateProfile);
 
 router.get("/get-users", handleGetUsers);
+
+router.patch("/:id/update-password", handleUpdatePassword);
 
 router.get("/:adminID/dashboard", handleGetAdminDashboard);
 
