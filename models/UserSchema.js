@@ -8,11 +8,11 @@ const SessionSchema = new Schema(
     deviceType: {
       type: String,
       enum: ["web", "android", "ios"],
-      default: "web"
+      default: "web",
     },
     deviceName: { type: String },
     lastActive: { type: Date, default: Date.now },
-    ipAddress: { type: String }
+    ipAddress: { type: String },
   },
   { _id: false }
 );
@@ -20,72 +20,72 @@ const SessionSchema = new Schema(
 const UserSchema = new Schema(
   {
     customerId: {
-      type: String
+      type: String,
     },
     username: {
       type: String,
-      unique: true
+      unique: true,
     },
     email: {
       type: String,
-      unique: true
+      unique: true,
     },
     contactNumber: {
       type: String,
-      unique: true
+      unique: true,
     },
     idCardNumber: {
       type: String,
-      unique: true
+      unique: true,
     },
     medicareNumber: {
       type: String,
-      unique: true
+      unique: true,
     },
     dob: {
-      type: String
+      type: String,
     },
     address: {
-      type: String
+      type: String,
     },
     gender: {
-      type: String
+      type: String,
     },
     bloodGroup: {
-      type: String
+      type: String,
     },
     pastInjury: {
-      type: String
+      type: String,
     },
     pastOperation: {
-      type: String
+      type: String,
     },
     medicines: {
-      type: String
+      type: String,
     },
     healthNote: {
-      type: String
+      type: String,
     },
     password: String,
     role: {
       type: String,
       enum: ["User"],
-      default: "User"
+      default: "User",
     },
     sessions: [SessionSchema],
     otp: {
-      type: String
+      type: String,
     },
     medicare: {
       type: String,
-      required: true
+      // required: true
     },
     otpExpire: {
-      type: Date
-    }
+      type: Date,
+    },
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 const UserModel = mongoose.model("users", UserSchema);

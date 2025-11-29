@@ -1,10 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  generateOTP
-} from "../utils/TokenGenerator.js";
+import { generateAccessToken, generateRefreshToken, generateOTP } from "../utils/TokenGenerator.js";
 import AdminModel from "../models/AdminSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
@@ -23,12 +19,10 @@ const register = async (req, res, next) => {
     const { username, email, password } = req.body;
 
     const existingUser = await AdminModel.findOne({
-      $or: [{ username }, { email }]
+      $or: [{ username }, { email }],
     });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Username or email already taken" });
+      return res.status(400).json({ message: "Username or email already taken" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -36,7 +30,7 @@ const register = async (req, res, next) => {
     const newUser = new AdminModel({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     await newUser.save();
@@ -52,7 +46,7 @@ const register = async (req, res, next) => {
       email: newUser.email,
       role: newUser.role,
       _id: newUser._id,
-      createdAt: newUser.createdAt
+      createdAt: newUser.createdAt,
     };
 
     // Return tokens
@@ -60,7 +54,7 @@ const register = async (req, res, next) => {
       message: "User registered successfully",
       accessToken,
       refreshToken,
-      user: userDetails
+      user: userDetails,
     });
   } catch (err) {
     next(err);
@@ -72,41 +66,21 @@ const register = async (req, res, next) => {
 // ENDPOINT: /api/user-register
 const handleRegisterUser = async (req, res, next) => {
   try {
-    const {
-      username,
-      email,
-      idCardNumber,
-      medicareNumber,
-      dob,
-      address,
-      gender,
-      bloodGroup,
-      pastInjury,
-      pastOperation,
-      medicines,
-      healthNote,
-      password,
-      fcmToken,
-      deviceType,
-      contactNumber,
-      deviceName
-    } = req.body;
-
+    const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
     const medicareFile = req?.files?.medicareFile?.[0];
+    console.log(medicareFile);
 
     if (!medicareFile) {
-      return res.status(400).json({message: "Medicare File is required!"})
+      return res.status(400).json({ message: "Medicare File is required!" });
     }
-    
-    const extractPath = ExtractRelativeFilePath(medicareFile)
+
+    const extractPath = ExtractRelativeFilePath(medicareFile);
 
     const existingUser = await UserModel.findOne({
-      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
     });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Username or email already taken" });
+      return res.status(400).json({ message: "Username or email already taken" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -126,7 +100,7 @@ const handleRegisterUser = async (req, res, next) => {
       medicines,
       healthNote,
       medicare: extractPath,
-      password: hashedPassword
+      password: hashedPassword,
     });
     await newUser.save();
 
@@ -139,14 +113,14 @@ const handleRegisterUser = async (req, res, next) => {
         refreshToken,
         deviceType: deviceType || "unknown",
         deviceName: deviceName || req.headers["user-agent"],
-        createdAt: new Date()
-      }
+        createdAt: new Date(),
+      },
     ];
 
     const customerId = await stripe.customers.create({
       email: email,
       name: username,
-      metadata: { userId: newUser._id.toString() }
+      metadata: { userId: newUser._id.toString() },
     });
 
     newUser.customerId = customerId.id;
@@ -167,14 +141,14 @@ const handleRegisterUser = async (req, res, next) => {
       pastInjury: newUser.pastInjury,
       pastOperation: newUser.pastOperation,
       medicines: newUser.medicines,
-      healthNote: newUser.healthNote
+      healthNote: newUser.healthNote,
     };
 
     res.status(201).json({
       message: "User registered successfully",
       accessToken,
       refreshToken,
-      user: userDetails
+      user: userDetails,
     });
   } catch (error) {
     console.log(error);
@@ -191,10 +165,10 @@ const login = async (req, res, next) => {
 
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -220,7 +194,7 @@ const login = async (req, res, next) => {
         email: user.email,
         role: user.role,
         _id: user._id,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       };
     } else if (user.role.includes("User")) {
       // 4️⃣ Save refresh token & session info
@@ -232,7 +206,7 @@ const login = async (req, res, next) => {
         fcmToken: fcmToken || null,
         deviceType: deviceType || "unknown",
         deviceName: deviceName || "unknown",
-        createdAt: new Date()
+        createdAt: new Date(),
       };
       user.sessions.push(sessionData);
 
@@ -240,17 +214,17 @@ const login = async (req, res, next) => {
       await user.save();
 
       const findSubscription = await SubscriptionModel.findOne({
-        userId: user._id
+        userId: user._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -271,7 +245,7 @@ const login = async (req, res, next) => {
         medicines: user.medicines,
         healthNote: user.healthNote,
         createdAt: user.createdAt,
-        subscribedPlan
+        subscribedPlan,
       };
     }
 
@@ -279,7 +253,7 @@ const login = async (req, res, next) => {
       message: "Logged In Successfully",
       accessToken,
       refreshToken,
-      user: details
+      user: details,
     });
   } catch (err) {
     next(err);
@@ -299,9 +273,7 @@ const refreshToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = (await AdminModel.findById(decoded.id)) || (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -316,7 +288,7 @@ const refreshToken = async (req, res, next) => {
       }
     } else if (user.role === "User") {
       // ✅ Check if token exists in any session
-      const session = user.sessions.find(s => s.refreshToken === token);
+      const session = user.sessions.find((s) => s.refreshToken === token);
       if (!session) {
         return res.status(403).json({ message: "Invalid refresh token" });
       }
@@ -344,9 +316,7 @@ const logout = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = (await AdminModel.findById(decoded.id)) || (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -356,7 +326,7 @@ const logout = async (req, res, next) => {
       await user.save();
       return res.status(200).json({ message: "Logged out successfully" });
     } else if (user.role === "User") {
-      user.sessions = user.sessions.filter(s => s.refreshToken !== token);
+      user.sessions = user.sessions.filter((s) => s.refreshToken !== token);
       await user.save();
       return res.status(200).json({ message: "Logged out successfully" });
     } else {
@@ -376,10 +346,10 @@ const forgetPassword = async (req, res, next) => {
     const { identifier } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -395,7 +365,7 @@ const forgetPassword = async (req, res, next) => {
     autoMailer({
       to: user.email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
     });
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
@@ -412,10 +382,10 @@ const verifyOtp = async (req, res, next) => {
     const { identifier, otp } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -444,10 +414,10 @@ const changePassword = async (req, res, next) => {
     const { identifier, otp, newPassword } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -479,8 +449,7 @@ const HandleUpdateProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const user =
-      (await AdminModel.findById(id)) || (await UserModel.findById(id));
+    const user = (await AdminModel.findById(id)) || (await UserModel.findById(id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -497,16 +466,14 @@ const HandleUpdateProfile = async (req, res, next) => {
       const existingUser =
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         })) ||
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         }));
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Username or email already taken" });
+        return res.status(400).json({ message: "Username or email already taken" });
       }
       user.username = username;
       user.email = email;
@@ -524,28 +491,12 @@ const HandleUpdateProfile = async (req, res, next) => {
         email: user.email,
         role: user.role,
         _id: user._id,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       };
 
-      return res
-        .status(200)
-        .json({ message: "Profile Updated Successfully", user: details });
+      return res.status(200).json({ message: "Profile Updated Successfully", user: details });
     } else if (user.role === "User") {
-      const {
-        username,
-        email,
-        idCardNumber,
-        medicareNumber,
-        dob,
-        address,
-        gender,
-        bloodGroup,
-        pastInjury,
-        pastOperation,
-        medicines,
-        healthNote,
-        password
-      } = req.body;
+      const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password } = req.body;
 
       // Build dynamic $or conditions
       const userOrConditions = [];
@@ -557,16 +508,14 @@ const HandleUpdateProfile = async (req, res, next) => {
       const existingUser =
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         })) ||
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         }));
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Username or email already taken" });
+        return res.status(400).json({ message: "Username or email already taken" });
       }
 
       user.username = username || user.username;
@@ -587,17 +536,17 @@ const HandleUpdateProfile = async (req, res, next) => {
       await user.save();
 
       const findSubscription = await SubscriptionModel.findOne({
-        userId: user._id
+        userId: user._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -618,11 +567,9 @@ const HandleUpdateProfile = async (req, res, next) => {
         medicines: user.medicines,
         healthNote: user.healthNote,
         createdAt: user.createdAt,
-        subscribedPlan
+        subscribedPlan,
       };
-      return res
-        .status(200)
-        .json({ message: "Profile Updated Successfully", user: details });
+      return res.status(200).json({ message: "Profile Updated Successfully", user: details });
     } else {
       res.status(400).json({ message: "Invalid Request" });
     }
@@ -637,13 +584,7 @@ const HandleUpdateProfile = async (req, res, next) => {
 const handleGetUserProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const findUser =
-      (await UserModel.findById(id).select(
-        "-sessions -password -otp -otpExpire"
-      )) ||
-      (await AdminModel.findById(id).select(
-        "-password -otp -otpExpire -refreshToken"
-      ));
+    const findUser = (await UserModel.findById(id).select("-sessions -password -otp -otpExpire")) || (await AdminModel.findById(id).select("-password -otp -otpExpire -refreshToken"));
 
     if (!findUser) {
       return res.status(404).json({ message: "User Not Found" });
@@ -651,17 +592,17 @@ const handleGetUserProfile = async (req, res, next) => {
 
     if (findUser.role === "User") {
       const findSubscription = await SubscriptionModel.findOne({
-        userId: findUser._id
+        userId: findUser._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -682,7 +623,7 @@ const handleGetUserProfile = async (req, res, next) => {
         medicines: findUser.medicines,
         healthNote: findUser.healthNote,
         createdAt: findUser.createdAt,
-        subscribedPlan
+        subscribedPlan,
       };
 
       return res.status(200).json({ user: details });
@@ -712,14 +653,14 @@ const handleGetUsers = async (req, res, next) => {
           from: "subscriptions",
           localField: "_id",
           foreignField: "userId",
-          as: "subscription"
-        }
+          as: "subscription",
+        },
       },
       {
         $unwind: {
           path: "$subscription",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
       {
@@ -727,15 +668,15 @@ const handleGetUsers = async (req, res, next) => {
           from: "plans",
           localField: "subscription.planId",
           foreignField: "_id",
-          as: "plan"
-        }
+          as: "plan",
+        },
       },
 
       {
         $unwind: {
           path: "$plan",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $project: {
@@ -758,9 +699,9 @@ const handleGetUsers = async (req, res, next) => {
           healthNote: 1,
           createdAt: 1,
           subscription: 1,
-          plan: 1
-        }
-      }
+          plan: 1,
+        },
+      },
     ];
 
     if (matchStage) pipeline.push(matchStage);
@@ -785,8 +726,8 @@ const handleGetUsers = async (req, res, next) => {
         totalItems,
         totalPages,
         page,
-        limit
-      }
+        limit,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -809,14 +750,12 @@ const handleGetAdminDashboard = async (req, res, next) => {
     // Total Users
     const totalUserPipeline = [{ $count: "totalItems" }];
     const totalUserCountRes = await UserModel.aggregate(totalUserPipeline);
-    const totalUsers =
-      totalUserCountRes.length > 0 ? totalUserCountRes[0].totalItems : 0;
+    const totalUsers = totalUserCountRes.length > 0 ? totalUserCountRes[0].totalItems : 0;
 
     // Total Pricing Plans
     const totalPlanPipeline = [{ $count: "totalItems" }];
     const totalPlanCountRes = await PlanModel.aggregate(totalPlanPipeline);
-    const totalPlans =
-      totalPlanCountRes.length > 0 ? totalPlanCountRes[0].totalItems : 0;
+    const totalPlans = totalPlanCountRes.length > 0 ? totalPlanCountRes[0].totalItems : 0;
 
     // Upcoming Reminders
     const currDateTime = new Date();
@@ -824,48 +763,29 @@ const handleGetAdminDashboard = async (req, res, next) => {
       {
         $match: {
           appointmentDate: {
-            $gte: currDateTime
-          }
-        }
+            $gte: currDateTime,
+          },
+        },
       },
-      { $count: "totalItems" }
+      { $count: "totalItems" },
     ];
-    const totalUpcomingRemindersCount = await ReminderModel.aggregate(
-      totalUpcomingReminders
-    );
-    const UpcomingReminders =
-      totalUpcomingRemindersCount.length > 0
-        ? totalUpcomingRemindersCount[0].totalItems
-        : 0;
+    const totalUpcomingRemindersCount = await ReminderModel.aggregate(totalUpcomingReminders);
+    const UpcomingReminders = totalUpcomingRemindersCount.length > 0 ? totalUpcomingRemindersCount[0].totalItems : 0;
 
     // Total Reminders
     const totalReminders = [{ $count: "totalItems" }];
     const totalRemindersCount = await ReminderModel.aggregate(totalReminders);
-    const Reminders =
-      totalRemindersCount.length > 0 ? totalRemindersCount[0].totalItems : 0;
+    const Reminders = totalRemindersCount.length > 0 ? totalRemindersCount[0].totalItems : 0;
 
     res.status(200).json({
       totalUsers: totalUsers,
       totalPlans: totalPlans,
       UpcomingReminders,
-      totalReminders: Reminders
+      totalReminders: Reminders,
     });
   } catch (error) {
     next(error);
   }
 };
 
-export {
-  register,
-  login,
-  logout,
-  refreshToken,
-  forgetPassword,
-  verifyOtp,
-  changePassword,
-  HandleUpdateProfile,
-  handleRegisterUser,
-  handleGetUserProfile,
-  handleGetUsers,
-  handleGetAdminDashboard
-};
+export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard };
