@@ -613,6 +613,9 @@ const handleGetUserProfile = async (req, res, next) => {
         username: findUser.username,
         email: findUser.email,
         idCardNumber: findUser.idCardNumber,
+        contactNumber: findUser.contactNumber,
+        contactNumber: findUser.contactNumber,
+        medicare: findUser.medicare,
         medicareNumber: findUser.medicareNumber,
         dob: findUser.dob,
         address: findUser.address,
@@ -788,4 +791,30 @@ const handleGetAdminDashboard = async (req, res, next) => {
   }
 };
 
-export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard };
+// UPDATE PASSWORD
+// METHOD : PATCH
+// ENDPOINT: /api/id/update-password
+const handleUpdatePassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { password, newPass } = req.body;
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User Not Found" });
+    }
+    if (password && password !== "" && newPass && newPass !== "") {
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: "Password is Incorrect" });
+      }
+      user.password = await bcrypt.hash(newPass, 10);
+    }
+    await user.save();
+    return res.status(200).json({ message: "Password Updated Successfully" });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard, handleUpdatePassword };

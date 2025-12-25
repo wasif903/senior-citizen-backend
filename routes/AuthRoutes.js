@@ -11,7 +11,8 @@ import {
   handleRegisterUser,
   handleGetUserProfile,
   handleGetUsers,
-  handleGetAdminDashboard
+  handleGetAdminDashboard,
+  handleUpdatePassword
 } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
 import {
@@ -22,8 +23,10 @@ import {
 import AuthMiddleware from "../middlewares/AuthMiddleware.js";
 import AccessMiddleware from "../middlewares/AccessMiddleware.js";
 import { CreateUploadMiddleware } from "../middlewares/MulterMiddleware.js";
+import { createRequire } from 'module';
 
 const router = express.Router();
+const require = createRequire(import.meta.url);
 
 router.post("/register", validate(adminSchema), register);
 
@@ -60,7 +63,8 @@ router.patch("/update-user/:id", HandleUpdateProfile);
 
 router.get("/get-users", handleGetUsers);
 
+router.patch("/:id/update-password", handleUpdatePassword);
+
 router.get("/:adminID/dashboard", handleGetAdminDashboard);
 
 export default router;
-
