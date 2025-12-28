@@ -39,9 +39,21 @@ cron.schedule("* * * * *", async () => {
     if (!reminder.recurringReminder) {
       if (now >= startTime && now < new Date(startTime.getTime() + 60000)) {
         console.log(`Sending single notification for user ${user._id}`);
+
         for (const session of user.sessions) {
-          if (session.fcmToken) await sendPushNotification(session.fcmToken, reminder);
+          if (!session.fcmToken) continue;
+
+          const timezone = session.timezone || "UTC";
+
+          await sendPushNotification(
+            session.fcmToken,
+            reminder,
+            timezone
+          );
+          // if (session.fcmToken) await sendPushNotification(session.fcmToken, reminder);
         }
+
+
       } else {
         console.log(`Single notification not due yet for user ${user._id}`);
       }
@@ -51,7 +63,15 @@ cron.schedule("* * * * *", async () => {
       if (diff >= 0 && diff % recurringIntervalMinutes === 0) {
         console.log(`Sending recurring notification for user ${user._id}`);
         for (const session of user.sessions) {
-          if (session.fcmToken) await sendPushNotification(session.fcmToken, reminder);
+          // if (session.fcmToken) await sendPushNotification(session.fcmToken, reminder);
+          if (!session.fcmToken) continue;
+          const timezone = session.timezone || "UTC";
+          await sendPushNotification(
+            session.fcmToken,
+            reminder,
+            timezone
+          );
+
         }
       } else {
         console.log(`Recurring notification not due yet for user ${user._id}, diff: ${diff} min`);
@@ -128,22 +148,35 @@ function convertToMinutes(str) {
   return num;
 }
 
-async function sendPushNotification(token, reminder) {
+async function sendPushNotification(token, reminder, timezone = "UTC") {
   try {
-    console.log(reminder)
+    const appointmentTime = new Date(
+      reminder.appointmentDate
+    ).toLocaleTimeString("en-US", {
+      timeZone: timezone,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+
     await admin.messaging().send({
       token,
       notification: {
         title: `Reminder: ${reminder.doctorName}`,
-        body: `Your appointment is at ${new Date(reminder.appointmentDate).toLocaleTimeString()}.`,
+        body: `Your appointment is at ${appointmentTime}.`,
       },
       data: {
         reminderId: String(reminder._id),
         type: "reminder",
       },
     });
-    console.log(`Notification sent to token ${token}`);
+
+    console.log(`Notification sent to token ${token} (${timezone})`);
   } catch (err) {
     console.error("Error sending notification:", err.message);
   }
 }
+

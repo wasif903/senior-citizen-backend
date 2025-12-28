@@ -95,9 +95,9 @@ const handleRegisterUser = async (req, res, next) => {
     const medicareFile = req?.files?.medicareFile?.[0];
 
     if (!medicareFile) {
-      return res.status(400).json({message: "Medicare File is required!"})
+      return res.status(400).json({ message: "Medicare File is required!" })
     }
-    
+
     const extractPath = ExtractRelativeFilePath(medicareFile)
 
     const existingUser = await UserModel.findOne({
@@ -544,7 +544,8 @@ const HandleUpdateProfile = async (req, res, next) => {
         pastOperation,
         medicines,
         healthNote,
-        password
+        password,
+        timezone
       } = req.body;
 
       // Build dynamic $or conditions
@@ -862,13 +863,13 @@ const handleGetAdminDashboard = async (req, res, next) => {
 // UPDATE PASSWORD
 // METHOD : PATCH
 // ENDPOINT: /api/id/update-password
-const handleUpdatePassword = async (req,res, next) => {
+const handleUpdatePassword = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { password, newPass } = req.body;
     const user = await UserModel.findById(id);
     if (!user) {
-      return res.status(404).json({ message: "User Not Found"})
+      return res.status(404).json({ message: "User Not Found" })
     }
     if (password && password !== "" && newPass && newPass !== "") {
       const isMatch = await bcrypt.compare(password, user.password);
@@ -879,11 +880,47 @@ const handleUpdatePassword = async (req,res, next) => {
     }
     await user.save();
     return res
-    .status(200)
-    .json({ message: "Password Updated Successfully" });
+      .status(200)
+      .json({ message: "Password Updated Successfully" });
   } catch (error) {
     console.log(error);
     next(error)
+  }
+}
+
+
+// UPDATE TIMEZONE
+// METHOD : PATCH
+// ENDPOINT: /api/update-timezone
+const handleUpdateTimezone = async (req, res, next) => {
+  try {
+    const { refreshToken, timezone } = req.body;
+
+    if (!refreshToken) {
+      return res.status(403).json({ message: "Refresh token is required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    const user =
+      (await UserModel.findById(decoded.id));
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const session = user.sessions.find(s => s.refreshToken === token);
+    if (!session) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
+    session.timezone = timezone
+    await session.save();
+
+    res.status(200).json({ message: "Timezone Updated Successfully" })
+
+  } catch (error) {
+    console.log(error);
+    next(error);
   }
 }
 
@@ -901,5 +938,6 @@ export {
   handleGetUserProfile,
   handleGetUsers,
   handleGetAdminDashboard,
-  handleUpdatePassword
+  handleUpdatePassword,
+  handleUpdateTimezone
 };
