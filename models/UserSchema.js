@@ -10,6 +10,10 @@ const SessionSchema = new Schema(
       enum: ["web", "android", "ios"],
       default: "web",
     },
+    timezone: {
+      type: String,
+      default: "UTC" // e.g. "Asia/Karachi"
+    },
     deviceName: { type: String },
     lastActive: { type: Date, default: Date.now },
     ipAddress: { type: String },

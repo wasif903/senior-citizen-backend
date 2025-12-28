@@ -67,8 +67,8 @@ const register = async (req, res, next) => {
 const handleRegisterUser = async (req, res, next) => {
   try {
     const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
+
     const medicareFile = req?.files?.medicareFile?.[0];
-    console.log({ body: req.body, file: req?.files?.medicareFile?.[0] });
 
     if (!medicareFile) {
       return res.status(400).json({ message: "Medicare File is required!" });
@@ -496,7 +496,7 @@ const HandleUpdateProfile = async (req, res, next) => {
 
       return res.status(200).json({ message: "Profile Updated Successfully", user: details });
     } else if (user.role === "User") {
-      const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password } = req.body;
+      const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, timezone } = req.body;
 
       // Build dynamic $or conditions
       const userOrConditions = [];
@@ -817,4 +817,37 @@ const handleUpdatePassword = async (req, res, next) => {
   }
 };
 
-export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard, handleUpdatePassword };
+// UPDATE TIMEZONE
+// METHOD : PATCH
+// ENDPOINT: /api/update-timezone
+const handleUpdateTimezone = async (req, res, next) => {
+  try {
+    const { refreshToken, timezone } = req.body;
+
+    if (!refreshToken) {
+      return res.status(403).json({ message: "Refresh token is required" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+
+    const user = await UserModel.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const session = user.sessions.find((s) => s.refreshToken === token);
+    if (!session) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
+    session.timezone = timezone;
+    await session.save();
+
+    res.status(200).json({ message: "Timezone Updated Successfully" });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard, handleUpdatePassword, handleUpdateTimezone };
