@@ -900,7 +900,7 @@ const handleUpdateTimezone = async (req, res, next) => {
       return res.status(403).json({ message: "Refresh token is required" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     const user =
       (await UserModel.findById(decoded.id));
@@ -909,7 +909,7 @@ const handleUpdateTimezone = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const session = user.sessions.find(s => s.refreshToken === token);
+    const session = user.sessions.find(s => s.refreshToken === refreshToken);
     if (!session) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
