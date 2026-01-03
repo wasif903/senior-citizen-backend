@@ -709,6 +709,7 @@ const handleGetUserProfile = async (req, res, next) => {
         medicines: findUser.medicines,
         healthNote: findUser.healthNote,
         createdAt: findUser.createdAt,
+        role: findUser.role,
         subscribedPlan
       };
 
