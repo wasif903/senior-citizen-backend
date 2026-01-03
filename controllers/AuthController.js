@@ -69,6 +69,8 @@ const handleRegisterUser = async (req, res, next) => {
     const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
 
     const medicareFile = req?.files?.medicareFile?.[0];
+    
+    console.log(medicareFile)
 
     if (!medicareFile) {
       return res.status(400).json({ message: "Medicare File is required!" });

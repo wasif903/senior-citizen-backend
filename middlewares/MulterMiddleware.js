@@ -66,6 +66,7 @@ const CreateUploadMiddleware = (fields) => {
                     return res.status(400).json({ error: "File too large. Max size is 1MB." });
                 }
                 if (err.code === "LIMIT_UNEXPECTED_FILE") {
+                    console.log(err)
                     return res.status(400).json({ error: "Too many files uploaded." });
                 }
                 return res.status(400).json({ error: err.message });

@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const SessionSchema = new Schema(
   {
-    fcmToken: { type: String, required: true },
+    fcmToken: { type: String, required: false },
     refreshToken: { type: String, required: true },
     deviceType: {
       type: String,
