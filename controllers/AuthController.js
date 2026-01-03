@@ -69,8 +69,8 @@ const handleRegisterUser = async (req, res, next) => {
     const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
 
     const medicareFile = req?.files?.medicareFile?.[0];
-    
-    console.log(medicareFile)
+
+    console.log(medicareFile);
 
     if (!medicareFile) {
       return res.status(400).json({ message: "Medicare File is required!" });
@@ -113,7 +113,7 @@ const handleRegisterUser = async (req, res, next) => {
       {
         fcmToken,
         refreshToken,
-        deviceType: deviceType || "unknown",
+        deviceType: deviceType || "web",
         deviceName: deviceName || req.headers["user-agent"],
         createdAt: new Date(),
       },
@@ -206,8 +206,8 @@ const login = async (req, res, next) => {
       const sessionData = {
         refreshToken,
         fcmToken: fcmToken || null,
-        deviceType: deviceType || "unknown",
-        deviceName: deviceName || "unknown",
+        deviceType: deviceType || "web",
+        deviceName: deviceName || "web",
         createdAt: new Date(),
       };
       user.sessions.push(sessionData);
@@ -258,6 +258,7 @@ const login = async (req, res, next) => {
       user: details,
     });
   } catch (err) {
+    console.log(err);
     next(err);
   }
 };
