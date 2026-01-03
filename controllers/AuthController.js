@@ -128,6 +128,23 @@ const handleRegisterUser = async (req, res, next) => {
     newUser.customerId = customerId.id;
     await newUser.save();
 
+    const findSubscription = await SubscriptionModel.findOne({
+      userId: newUser._id,
+    });
+
+    let subscribedPlan;
+    if (findSubscription) {
+      const findPlan = await PlanModel.findOne({
+        _id: findSubscription.planId,
+      });
+      subscribedPlan = {
+        subscription: findSubscription,
+        plan: findPlan,
+      };
+    } else {
+      subscribedPlan = null;
+    }
+
     const userDetails = {
       _id: newUser._id,
       username: newUser.username,
@@ -144,6 +161,8 @@ const handleRegisterUser = async (req, res, next) => {
       pastOperation: newUser.pastOperation,
       medicines: newUser.medicines,
       healthNote: newUser.healthNote,
+      role: newUser.role,
+      subscribedPlan,
     };
 
     res.status(201).json({
@@ -247,6 +266,7 @@ const login = async (req, res, next) => {
         medicines: user.medicines,
         healthNote: user.healthNote,
         createdAt: user.createdAt,
+        role: user.role,
         subscribedPlan,
       };
     }
