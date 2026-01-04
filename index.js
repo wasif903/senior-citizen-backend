@@ -6,9 +6,10 @@ import mongoose from "mongoose";
 // Middlewares
 import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
-import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import qs from "qs";
+import rateLimiter from "./middlewares/RateLimiter.js";
+
 
 // DB Connection
 import connectDB from "./config/DB.js";
@@ -31,7 +32,6 @@ import { handleStripeWebhook } from "./webhooks/StripeSubscriptionWebhook.js";
 
 // Notification Cron
 import "./crons/NotificationCron.js";
-import rateLimiter from "./middlewares/RateLimiter.js";
 
 dotenv.config();
 
