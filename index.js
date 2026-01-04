@@ -6,10 +6,9 @@ import mongoose from "mongoose";
 // Middlewares
 import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
+import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import qs from "qs";
-import RateLimiter from "./middlewares/RateLimiter.js";
-
 
 // DB Connection
 import connectDB from "./config/DB.js";
@@ -39,8 +38,6 @@ const app = express();
 
 const httpServer = createServer(app);
 
-app.set("trust proxy", 1);
-
 app.use(SecurityHeaders);
 
 app.set("query parser", "extended");
@@ -50,11 +47,6 @@ connectDB();
 
 // Stripe Webhook
 app.use("/api/stripe", WebhookRoutes);
-
-
-
-// === Rate Limiter
-app.use(RateLimiter); 
 
 // === Global Middlewares ===
 app.use(express.json());
@@ -86,6 +78,8 @@ app.use(
   express.static("uploads")
 );
 
+// === Rate Limiter
+app.use(RateLimiter);
 
 // === Logger Middleware for logging errors
 app.use(ErrorLogger);
