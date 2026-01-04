@@ -51,6 +51,9 @@ connectDB();
 // Stripe Webhook
 app.use("/api/stripe", WebhookRoutes);
 
+
+
+// === Rate Limiter
 app.use(rateLimiter); 
 
 // === Global Middlewares ===
@@ -83,8 +86,6 @@ app.use(
   express.static("uploads")
 );
 
-// === Rate Limiter
-app.use(RateLimiter);
 
 // === Logger Middleware for logging errors
 app.use(ErrorLogger);
