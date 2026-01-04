@@ -4,5 +4,6 @@ export const allowedOrigins = [
     "http://www.justseniors.org",
     "https://www.justseniors.org",
     "http://justseniors.org",
+    "https://justseniors.org",
     "https://api.justseniors.org"
 ]
