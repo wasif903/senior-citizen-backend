@@ -5,8 +5,7 @@ const RateLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  // keyGenerator: (req) => ipKeyGenerator(req), // IPv6 safe
-  trustProxy: true, // ✅ allows keyGenerator to read real client IP behind proxy
+  // trustProxy is NOT a valid option here - remove it
 });
 
 export default RateLimiter;
