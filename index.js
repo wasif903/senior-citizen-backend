@@ -8,7 +8,7 @@ import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import qs from "qs";
-import rateLimiter from "./middlewares/RateLimiter.js";
+import RateLimiter from "./middlewares/RateLimiter.js";
 
 
 // DB Connection
@@ -54,7 +54,7 @@ app.use("/api/stripe", WebhookRoutes);
 
 
 // === Rate Limiter
-app.use(rateLimiter); 
+app.use(RateLimiter); 
 
 // === Global Middlewares ===
 app.use(express.json());
