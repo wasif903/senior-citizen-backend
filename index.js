@@ -79,7 +79,7 @@ app.use(
 );
 
 // === Rate Limiter
-app.use(RateLimiter);
+// app.use(RateLimiter);
 
 // === Logger Middleware for logging errors
 app.use(ErrorLogger);
