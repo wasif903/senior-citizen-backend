@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -6,14 +6,13 @@ const rateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 
-  // 🔥 THIS IS THE KEY FIX
+  // 🔥 Disable proxy header validation (you are behind Nginx)
   validate: {
     xForwardedForHeader: false,
   },
 
-  keyGenerator: (req) => {
-    return req.ip; // real client IP (works with trust proxy)
-  },
+  // ✅ IPv4 + IPv6 safe
+  keyGenerator: (req, res) => ipKeyGenerator(req, res),
 });
 
 export default rateLimiter;
