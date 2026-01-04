@@ -31,12 +31,15 @@ import { handleStripeWebhook } from "./webhooks/StripeSubscriptionWebhook.js";
 
 // Notification Cron
 import "./crons/NotificationCron.js";
+import rateLimiter from "./middlewares/RateLimiter.js";
 
 dotenv.config();
 
 const app = express();
 
 const httpServer = createServer(app);
+
+app.set("trust proxy", 1);
 
 app.use(SecurityHeaders);
 
@@ -47,6 +50,8 @@ connectDB();
 
 // Stripe Webhook
 app.use("/api/stripe", WebhookRoutes);
+
+app.use(rateLimiter); 
 
 // === Global Middlewares ===
 app.use(express.json());
