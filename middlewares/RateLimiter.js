@@ -9,6 +9,9 @@ const rateLimiter = rateLimit({
   validate: {
     xForwardedForHeader: false,
   },
+
+  // ✅ THIS STOPS THE IPv6 KEY GENERATOR ERROR
+  ipv6Subnet: false,
 });
 
 export default rateLimiter;
