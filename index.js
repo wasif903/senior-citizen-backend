@@ -36,6 +36,8 @@ dotenv.config();
 
 const app = express();
 
+app.set("trust proxy", true);
+
 const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
@@ -56,7 +58,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["POST", "GET", "PATCH", "DELETE"]
+    methods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"]
   })
 );
 
@@ -79,7 +81,7 @@ app.use(
 );
 
 // === Rate Limiter
-// app.use(RateLimiter);
+app.use(RateLimiter);
 
 // === Logger Middleware for logging errors
 app.use(ErrorLogger);
