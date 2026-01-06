@@ -36,7 +36,11 @@ dotenv.config();
 
 const app = express();
 
+console.log("TRUST PROXY VALUE:", app.get("trust proxy"));
+
 app.set("trust proxy", 1);
+
+console.log("TRUST PROXY AFTER SET:", app.get("trust proxy"));
 
 const httpServer = createServer(app);
 
