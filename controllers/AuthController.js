@@ -108,6 +108,7 @@ const handleRegisterUser = async (req, res, next) => {
     const existingUser = await UserModel.findOne({
       $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
     });
+    console.log(existingUser, "existingUser")
     if (existingUser) {
       return res
         .status(400)
