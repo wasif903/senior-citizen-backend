@@ -105,15 +105,17 @@ const handleRegisterUser = async (req, res, next) => {
     const extractPath = ExtractRelativeFilePath(medicareFile)
     console.log("Console 3")
 
-    const existingUser = await UserModel.findOne({
-      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
-    });
-    console.log(existingUser, "existingUser")
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Username or email already taken" });
+    let existingUser;
+    try {
+      existingUser = await UserModel.findOne({
+        $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+      });
+      console.log(existingUser, "existingUser");
+    } catch (err) {
+      console.error("MongoDB query failed:", err);
+      return res.status(500).json({ message: "Database query failed" });
     }
+
     console.log("Console 4")
 
     const hashedPassword = await bcrypt.hash(password, 10);
