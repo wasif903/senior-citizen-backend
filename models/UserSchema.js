@@ -32,19 +32,19 @@ const UserSchema = new Schema(
     },
     email: {
       type: String,
-      unique: true
+      unique: false
     },
     contactNumber: {
       type: String,
-      unique: true
+      unique: false
     },
     idCardNumber: {
       type: String,
-      unique: true
+      unique: false
     },
     medicareNumber: {
       type: String,
-      unique: true
+      unique: false
     },
     dob: {
       type: String
