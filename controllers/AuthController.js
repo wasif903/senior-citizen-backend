@@ -209,7 +209,7 @@ const handleRegisterUser = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { identifier, password, fcmToken, deviceType, deviceName } = req.body;
-
+    console.log("Console 1")
     const user =
       (await AdminModel.findOne({
         $or: [{ email: identifier }, { username: identifier }]
@@ -217,18 +217,22 @@ const login = async (req, res, next) => {
       (await UserModel.findOne({
         $or: [{ email: identifier }, { username: identifier }]
       }));
+      console.log("Console 2")
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+    console.log("Console 3")
 
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+    console.log("Console 4")
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
+    console.log("Console 5")
 
     let details;
 
