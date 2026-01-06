@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 // Middlewares
 import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
-import RateLimiter from "./middlewares/RateLimiter.js";
+// import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import qs from "qs";
 
@@ -85,6 +85,13 @@ app.use(
 );
 
 // === Rate Limiter
+import rateLimit from "express-rate-limit";
+
+const RateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+
 app.use(RateLimiter);
 
 // === Logger Middleware for logging errors
