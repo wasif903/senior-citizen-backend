@@ -121,24 +121,31 @@ const handleRegisterUser = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     console.log("Console 5")
 
-    const newUser = new UserModel({
-      username,
-      email,
-      contactNumber,
-      idCardNumber,
-      medicareNumber,
-      dob,
-      address,
-      gender,
-      bloodGroup,
-      pastInjury,
-      pastOperation,
-      medicines,
-      healthNote,
-      medicare: extractPath,
-      password: hashedPassword
-    });
-    await newUser.save();
+    let newUser;
+    try {
+      newUser = new UserModel({
+        username,
+        email,
+        contactNumber,
+        idCardNumber,
+        medicareNumber,
+        dob,
+        address,
+        gender,
+        bloodGroup,
+        pastInjury,
+        pastOperation,
+        medicines,
+        healthNote,
+        medicare: extractPath,
+        password: hashedPassword
+      });
+      await newUser.save();
+    } catch (err) {
+      console.error("Failed to save user:", err);
+      return res.status(500).json({ message: "Failed to save user" });
+    }
+
     console.log("Console 6")
 
     const accessToken = generateAccessToken(newUser);
