@@ -277,6 +277,10 @@ const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
     const extractPath = ExtractRelativeFilePath(medicareFile);
     console.log("✅ Extracted medicare path:", extractPath);
 
+    const check2 = await UserModel.find();
+
+    console.log("check2", check2)
+    
     // --- Check if user already exists ---
     console.log("🔍 Checking existing user in DB...");
     let existingUser;

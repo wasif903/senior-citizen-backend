@@ -15,7 +15,10 @@ const SecurityHeaders = helmet({
         "http://localhost:5173",
         "http://31.97.141.173:5000/api/login",
         "http://www.justseniors.org",
+        "https://www.justseniors.org",
         "http://justseniors.org",
+        "https://justseniors.org",
+        "https://api.justseniors.org",
       ],
       connectSrc: [
         "'self'",
@@ -23,8 +26,9 @@ const SecurityHeaders = helmet({
         "http://localhost:5000",
         "http://localhost:5173",
         "http://31.97.141.173:5000/api/login",
-        "http://www.justseniors.org",
-        "http://justseniors.org"
+        "https://www.justseniors.org",
+        "https://justseniors.org",
+        "https://api.justseniors.org",
       ],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"]
