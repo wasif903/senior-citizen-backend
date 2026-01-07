@@ -277,137 +277,137 @@ const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
     const extractPath = ExtractRelativeFilePath(medicareFile);
     console.log("✅ Extracted medicare path:", extractPath);
 
-    const check2 = await UserModel.find();
+    // const check2 = await UserModel.find();
 
-    console.log("check2", check2)
-    
-    // --- Check if user already exists ---
-    console.log("🔍 Checking existing user in DB...");
-    let existingUser;
-    try {
-      existingUser = await UserModel.findOne({
-        $or: [
-          { username },
-          { email },
-          { idCardNumber },
-          { medicareNumber }
-        ]
-      });
-      console.log("🔍 Existing user found:", existingUser);
-      if (existingUser) {
-        return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
-      }
-    } catch (err) {
-      console.error("❌ MongoDB query failed:", err.stack);
-      return res.status(500).json({ message: "Database query failed" });
-    }
+    // console.log("check2", check2)
 
-    // --- Hash password ---
-    console.log("🔑 Hashing password...");
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // // --- Check if user already exists ---
+    // console.log("🔍 Checking existing user in DB...");
+    // let existingUser;
+    // try {
+    //   existingUser = await UserModel.findOne({
+    //     $or: [
+    //       { username },
+    //       { email },
+    //       { idCardNumber },
+    //       { medicareNumber }
+    //     ]
+    //   });
+    //   console.log("🔍 Existing user found:", existingUser);
+    //   if (existingUser) {
+    //     return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
+    //   }
+    // } catch (err) {
+    //   console.error("❌ MongoDB query failed:", err.stack);
+    //   return res.status(500).json({ message: "Database query failed" });
+    // }
 
-    // --- Create new user ---
-    console.log("🆕 Creating new user...");
-    let newUser;
-    try {
-      newUser = new UserModel({
-        username,
-        email,
-        contactNumber,
-        idCardNumber,
-        medicareNumber,
-        dob,
-        address,
-        gender,
-        bloodGroup,
-        pastInjury,
-        pastOperation,
-        medicines,
-        healthNote,
-        medicare: extractPath,
-        password: hashedPassword
-      });
-      await newUser.save();
-      console.log("✅ User saved to DB:", newUser._id);
-    } catch (err) {
-      console.error("❌ Failed to save user:", err.stack);
-      return res.status(500).json({ message: "Failed to save user" });
-    }
+    // // --- Hash password ---
+    // console.log("🔑 Hashing password...");
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
-    // --- Generate tokens ---
-    console.log("📝 Generating access and refresh tokens...");
-    const accessToken = generateAccessToken(newUser);
-    const refreshToken = generateRefreshToken(newUser);
+    // // --- Create new user ---
+    // console.log("🆕 Creating new user...");
+    // let newUser;
+    // try {
+    //   newUser = new UserModel({
+    //     username,
+    //     email,
+    //     contactNumber,
+    //     idCardNumber,
+    //     medicareNumber,
+    //     dob,
+    //     address,
+    //     gender,
+    //     bloodGroup,
+    //     pastInjury,
+    //     pastOperation,
+    //     medicines,
+    //     healthNote,
+    //     medicare: extractPath,
+    //     password: hashedPassword
+    //   });
+    //   await newUser.save();
+    //   console.log("✅ User saved to DB:", newUser._id);
+    // } catch (err) {
+    //   console.error("❌ Failed to save user:", err.stack);
+    //   return res.status(500).json({ message: "Failed to save user" });
+    // }
 
-    // --- Save session info ---
-    newUser.sessions = [
-      {
-        fcmToken,
-        refreshToken,
-        deviceType: deviceType || "web",
-        deviceName: deviceName || req.headers["user-agent"],
-        createdAt: new Date()
-      }
-    ];
+    // // --- Generate tokens ---
+    // console.log("📝 Generating access and refresh tokens...");
+    // const accessToken = generateAccessToken(newUser);
+    // const refreshToken = generateRefreshToken(newUser);
 
-    // --- Create Stripe customer ---
-    console.log("💳 Creating Stripe customer...");
-    try {
-      const customer = await stripe.customers.create({
-        email,
-        name: username,
-        metadata: { userId: newUser._id.toString() }
-      });
-      newUser.customerId = customer.id;
-      await newUser.save();
-      console.log("✅ Stripe customer created:", customer.id);
-    } catch (err) {
-      console.error("❌ Stripe customer creation failed:", err.stack);
-      // continue without blocking registration
-    }
+    // // --- Save session info ---
+    // newUser.sessions = [
+    //   {
+    //     fcmToken,
+    //     refreshToken,
+    //     deviceType: deviceType || "web",
+    //     deviceName: deviceName || req.headers["user-agent"],
+    //     createdAt: new Date()
+    //   }
+    // ];
 
-    // --- Check subscription ---
-    console.log("🔔 Checking subscriptions...");
-    let subscribedPlan = null;
-    try {
-      const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
-      if (subscription) {
-        const plan = await PlanModel.findOne({ _id: subscription.planId });
-        subscribedPlan = { subscription, plan };
-      }
-    } catch (err) {
-      console.error("❌ Subscription lookup failed:", err.stack);
-    }
+    // // --- Create Stripe customer ---
+    // console.log("💳 Creating Stripe customer...");
+    // try {
+    //   const customer = await stripe.customers.create({
+    //     email,
+    //     name: username,
+    //     metadata: { userId: newUser._id.toString() }
+    //   });
+    //   newUser.customerId = customer.id;
+    //   await newUser.save();
+    //   console.log("✅ Stripe customer created:", customer.id);
+    // } catch (err) {
+    //   console.error("❌ Stripe customer creation failed:", err.stack);
+    //   // continue without blocking registration
+    // }
 
-    // --- Prepare response user object ---
-    const userDetails = {
-      _id: newUser._id,
-      username: newUser.username,
-      email: newUser.email,
-      idCardNumber: newUser.idCardNumber,
-      contactNumber: newUser.contactNumber,
-      medicare: newUser.medicare,
-      medicareNumber: newUser.medicareNumber,
-      dob: newUser.dob,
-      address: newUser.address,
-      gender: newUser.gender,
-      bloodGroup: newUser.bloodGroup,
-      pastInjury: newUser.pastInjury,
-      pastOperation: newUser.pastOperation,
-      medicines: newUser.medicines,
-      healthNote: newUser.healthNote,
-      role: newUser.role,
-      subscribedPlan
-    };
+    // // --- Check subscription ---
+    // console.log("🔔 Checking subscriptions...");
+    // let subscribedPlan = null;
+    // try {
+    //   const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
+    //   if (subscription) {
+    //     const plan = await PlanModel.findOne({ _id: subscription.planId });
+    //     subscribedPlan = { subscription, plan };
+    //   }
+    // } catch (err) {
+    //   console.error("❌ Subscription lookup failed:", err.stack);
+    // }
 
-    console.log("✅ Registration complete for user:", newUser._id);
+    // // --- Prepare response user object ---
+    // const userDetails = {
+    //   _id: newUser._id,
+    //   username: newUser.username,
+    //   email: newUser.email,
+    //   idCardNumber: newUser.idCardNumber,
+    //   contactNumber: newUser.contactNumber,
+    //   medicare: newUser.medicare,
+    //   medicareNumber: newUser.medicareNumber,
+    //   dob: newUser.dob,
+    //   address: newUser.address,
+    //   gender: newUser.gender,
+    //   bloodGroup: newUser.bloodGroup,
+    //   pastInjury: newUser.pastInjury,
+    //   pastOperation: newUser.pastOperation,
+    //   medicines: newUser.medicines,
+    //   healthNote: newUser.healthNote,
+    //   role: newUser.role,
+    //   subscribedPlan
+    // };
+
+    // console.log("✅ Registration complete for user:", newUser._id);
 
     // --- Send response ---
     return res.status(201).json({
       message: "User registered successfully",
-      accessToken,
-      refreshToken,
-      user: userDetails
+      // accessToken,
+      // refreshToken,
+      // user: userDetails
     });
   } catch (error) {
     console.error("❌ Registration failed:", error.stack);
