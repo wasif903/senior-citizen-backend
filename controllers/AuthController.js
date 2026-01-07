@@ -68,7 +68,7 @@ const register = async (req, res, next) => {
 const handleRegisterUser = async (req, res, next) => {
   try {
     const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
-    console.log(contactNumber, "-----");
+    console.log(req.body, "req.body");
     const medicareFile = req?.files?.medicareFile?.[0];
     console.log("Console 1");
 
