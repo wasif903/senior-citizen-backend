@@ -70,171 +70,8 @@ const register = async (req, res, next) => {
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/user-register
-// const handleRegisterUser = async (req, res, next) => {
-//   try {
-//     const {
-//       username,
-//       email,
-//       idCardNumber,
-//       medicareNumber,
-//       dob,
-//       address,
-//       gender,
-//       bloodGroup,
-//       pastInjury,
-//       pastOperation,
-//       medicines,
-//       healthNote,
-//       password,
-//       fcmToken,
-//       deviceType,
-//       contactNumber,
-//       deviceName
-//     } = req.body;
-
-//     const medicareFile = req?.files?.medicareFile?.[0];
-//     console.log("Console 1")
-
-//     console.log(medicareFile)
-
-//     if (!medicareFile) {
-//       return res.status(400).json({ message: "Medicare File is required!" })
-//     }
-
-//     console.log("Before Mongo findOne");
-//     let check = await UserModel.findOne({ username });
-//     console.log("After Mongo findOne", check);
-
-//     console.log("Console 2")
-
-//     const extractPath = ExtractRelativeFilePath(medicareFile)
-//     console.log("Console 3")
-
-//     let existingUser;
-//     try {
-//       existingUser = await UserModel.findOne({
-//         $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
-//       });
-//       console.log(existingUser, "existingUser");
-//     } catch (err) {
-//       console.error("MongoDB query failed:", err);
-//       return res.status(500).json({ message: "Database query failed" });
-//     }
-
-//     console.log("Console 4")
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     console.log("Console 5")
-
-//     let newUser;
-//     try {
-//       newUser = new UserModel({
-//         username,
-//         email,
-//         contactNumber,
-//         idCardNumber,
-//         medicareNumber,
-//         dob,
-//         address,
-//         gender,
-//         bloodGroup,
-//         pastInjury,
-//         pastOperation,
-//         medicines,
-//         healthNote,
-//         medicare: extractPath,
-//         password: hashedPassword
-//       });
-//       await newUser.save();
-//     } catch (err) {
-//       console.error("Failed to save user:", err);
-//       return res.status(500).json({ message: "Failed to save user" });
-//     }
-
-//     console.log("Console 6")
-
-//     const accessToken = generateAccessToken(newUser);
-//     const refreshToken = generateRefreshToken(newUser);
-//     console.log("Console 7")
-
-//     newUser.sessions = [
-//       {
-//         fcmToken,
-//         refreshToken,
-//         deviceType: deviceType || "web",
-//         deviceName: deviceName || req.headers["user-agent"],
-//         createdAt: new Date()
-//       }
-//     ];
-//     console.log("Console 8")
-
-//     const customerId = await stripe.customers.create({
-//       email: email,
-//       name: username,
-//       metadata: { userId: newUser._id.toString() }
-//     });
-//     console.log("Console 8")
-
-//     newUser.customerId = customerId.id;
-//     await newUser.save();
-//     console.log("Console 9")
-
-//     const findSubscription = await SubscriptionModel.findOne({
-//       userId: newUser._id
-//     });
-//     console.log("Console 10")
-
-//     let subscribedPlan;
-//     if (findSubscription) {
-//       const findPlan = await PlanModel.findOne({
-//         _id: findSubscription.planId
-//       });
-//       subscribedPlan = {
-//         subscription: findSubscription,
-//         plan: findPlan
-//       };
-//     } else {
-//       subscribedPlan = null;
-//     }
-//     console.log("Console 11")
-
-//     const userDetails = {
-//       _id: newUser._id,
-//       username: newUser.username,
-//       email: newUser.email,
-//       idCardNumber: newUser.idCardNumber,
-//       contactNumber: newUser.contactNumber,
-//       medicare: newUser.medicare,
-//       medicareNumber: newUser.medicareNumber,
-//       dob: newUser.dob,
-//       address: newUser.address,
-//       gender: newUser.gender,
-//       bloodGroup: newUser.bloodGroup,
-//       pastInjury: newUser.pastInjury,
-//       pastOperation: newUser.pastOperation,
-//       medicines: newUser.medicines,
-//       healthNote: newUser.healthNote,
-//       role: newUser.role,
-//       subscribedPlan
-//     };
-//     console.log("Console 12")
-
-//     res.status(201).json({
-//       message: "User registered successfully",
-//       accessToken,
-//       refreshToken,
-//       user: userDetails
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     next(error);
-//   }
-// };
 const handleRegisterUser = async (req, res, next) => {
   try {
-    console.log("🚀 Registration started");
-
-    // 1️⃣ Destructure body
     const {
       username,
       email,
@@ -254,61 +91,43 @@ const handleRegisterUser = async (req, res, next) => {
       contactNumber,
       deviceName
     } = req.body;
-    console.log("📦 Request body parsed", { username, email, idCardNumber, medicareNumber });
-
-    // 2️⃣ Validate uploaded file
+    console.log(contactNumber, "-----")
     const medicareFile = req?.files?.medicareFile?.[0];
-    console.log("🗂 Uploaded medicareFile:", medicareFile);
+    console.log("Console 1")
+
+    console.log(medicareFile)
 
     if (!medicareFile) {
-      console.warn("⚠️ Medicare file missing");
-      return res.status(400).json({ message: "Medicare file is required!" });
+      return res.status(400).json({ message: "Medicare File is required!" })
     }
 
-    const medicarePath = ExtractRelativeFilePath(medicareFile);
-    console.log("✅ Extracted medicare path:", medicarePath);
+    console.log("Before Mongo findOne");
+    let check = await UserModel.findOne({ username });
+    console.log("After Mongo findOne", check);
 
-    // 3️⃣ Check if user already exists
+    console.log("Console 2")
+
+    const extractPath = ExtractRelativeFilePath(medicareFile)
+    console.log("Console 3")
+
     let existingUser;
     try {
-      console.log("🔍 Checking existing user in DB");
       existingUser = await UserModel.findOne({
-        $or: [
-          { username },
-          { email },
-          { idCardNumber },
-          { medicareNumber },
-          { contactNumber }
-        ]
+        $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
       });
-      console.log("🔎 Existing user result:", existingUser);
+      console.log(existingUser, "existingUser");
     } catch (err) {
-      console.error("❌ MongoDB findOne failed:", err);
+      console.error("MongoDB query failed:", err);
       return res.status(500).json({ message: "Database query failed" });
     }
 
-    if (existingUser) {
-      console.warn("⚠️ Duplicate user found");
-      return res
-        .status(400)
-        .json({ message: "Username, email, ID card, Medicare number, or contact already exists." });
-    }
+    console.log("Console 4")
 
-    // 4️⃣ Hash password
-    let hashedPassword;
-    try {
-      console.log("🔐 Hashing password");
-      hashedPassword = await bcrypt.hash(password, 10);
-      console.log("✅ Password hashed");
-    } catch (err) {
-      console.error("❌ Password hashing failed:", err);
-      return res.status(500).json({ message: "Failed to hash password" });
-    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Console 5")
 
-    // 5️⃣ Create new user
     let newUser;
     try {
-      console.log("🆕 Creating new user");
       newUser = new UserModel({
         username,
         email,
@@ -323,22 +142,21 @@ const handleRegisterUser = async (req, res, next) => {
         pastOperation,
         medicines,
         healthNote,
-        medicare: medicarePath,
+        medicare: extractPath,
         password: hashedPassword
       });
       await newUser.save();
-      console.log("✅ New user saved to DB", newUser._id);
     } catch (err) {
-      console.error("❌ Failed to save user:", err);
-      return res.status(500).json({ message: "Failed to save user", error: err.message });
+      console.error("Failed to save user:", err);
+      return res.status(500).json({ message: "Failed to save user" });
     }
 
-    // 6️⃣ Generate JWT tokens
+    console.log("Console 6")
+
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
-    console.log("🔑 Tokens generated");
+    console.log("Console 7")
 
-    // 7️⃣ Save session
     newUser.sessions = [
       {
         fcmToken,
@@ -348,50 +166,46 @@ const handleRegisterUser = async (req, res, next) => {
         createdAt: new Date()
       }
     ];
-    console.log("💾 Session saved locally");
+    console.log("Console 8")
 
-    // 8️⃣ Create Stripe customer safely
-    try {
-      console.log("💳 Creating Stripe customer");
-      const customer = await stripe.customers.create({
-        email: email,
-        name: username,
-        metadata: { userId: newUser._id.toString() }
-      });
-      newUser.customerId = customer.id;
-      console.log("✅ Stripe customer created:", customer.id);
-    } catch (err) {
-      console.error("⚠️ Stripe customer creation failed:", err);
-    }
+    const customerId = await stripe.customers.create({
+      email: email,
+      name: username,
+      metadata: { userId: newUser._id.toString() }
+    });
+    console.log("Console 8")
 
+    newUser.customerId = customerId.id;
     await newUser.save();
-    console.log("💾 User updated with session & Stripe ID");
+    console.log("Console 9")
 
-    // 9️⃣ Fetch subscription if any
-    let subscribedPlan = null;
-    try {
-      console.log("📄 Checking for existing subscription");
-      const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
-      if (subscription) {
-        const plan = await PlanModel.findOne({ _id: subscription.planId });
-        subscribedPlan = { subscription, plan };
-        console.log("✅ Subscription found", subscribedPlan);
-      } else {
-        console.log("ℹ️ No subscription found for user");
-      }
-    } catch (err) {
-      console.error("⚠️ Subscription fetch failed:", err);
+    const findSubscription = await SubscriptionModel.findOne({
+      userId: newUser._id
+    });
+    console.log("Console 10")
+
+    let subscribedPlan;
+    if (findSubscription) {
+      const findPlan = await PlanModel.findOne({
+        _id: findSubscription.planId
+      });
+      subscribedPlan = {
+        subscription: findSubscription,
+        plan: findPlan
+      };
+    } else {
+      subscribedPlan = null;
     }
+    console.log("Console 11")
 
-    // 10️⃣ Build user details response
     const userDetails = {
       _id: newUser._id,
       username: newUser.username,
       email: newUser.email,
-      contactNumber: newUser.contactNumber,
       idCardNumber: newUser.idCardNumber,
-      medicareNumber: newUser.medicareNumber,
+      contactNumber: newUser.contactNumber,
       medicare: newUser.medicare,
+      medicareNumber: newUser.medicareNumber,
       dob: newUser.dob,
       address: newUser.address,
       gender: newUser.gender,
@@ -403,21 +217,19 @@ const handleRegisterUser = async (req, res, next) => {
       role: newUser.role,
       subscribedPlan
     };
-    console.log("📤 Sending final response");
+    console.log("Console 12")
 
-    return res.status(201).json({
+    res.status(201).json({
       message: "User registered successfully",
       accessToken,
       refreshToken,
       user: userDetails
     });
-
   } catch (error) {
-    console.error("🔥 Unhandled error in register:", error);
+    console.log(error);
     next(error);
   }
 };
-
 
 // LOGIN
 // METHOD : POST
