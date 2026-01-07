@@ -100,6 +100,11 @@ const handleRegisterUser = async (req, res, next) => {
     if (!medicareFile) {
       return res.status(400).json({ message: "Medicare File is required!" })
     }
+
+    console.log("Before Mongo findOne");
+    let check = await UserModel.findOne({ username });
+    console.log("After Mongo findOne", check);
+
     console.log("Console 2")
 
     const extractPath = ExtractRelativeFilePath(medicareFile)
