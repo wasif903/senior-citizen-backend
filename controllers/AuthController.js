@@ -234,8 +234,8 @@ const handleRegisterUser = async (req, res, next) => {
   try {
     console.log("🚀 Registration started");
 
-    // 1️⃣ Destructure body
-    const {
+    // --- Destructure body ---
+    let {
       username,
       email,
       idCardNumber,
@@ -254,62 +254,57 @@ const handleRegisterUser = async (req, res, next) => {
       contactNumber,
       deviceName
     } = req.body;
-    console.log("📦 Request body parsed", { username, email, idCardNumber, medicareNumber });
 
-    console.log(req.body, "body")
-    // 2️⃣ Validate uploaded file
+    console.log("📦 Request body parsed", req.body);
+
+    // --- Trim input to avoid spaces issues ---
+    username = username?.trim();
+    email = email?.trim();
+    idCardNumber = idCardNumber?.trim();
+    medicareNumber = medicareNumber?.trim();
+    contactNumber = contactNumber?.trim();
+
+    // --- Check uploaded file ---
     const medicareFile = req?.files?.medicareFile?.[0];
+    if (!medicareFile) {
+      console.log("❌ No medicare file uploaded");
+      return res.status(400).json({ message: "Medicare File is required!" });
+    }
     console.log("🗂 Uploaded medicareFile:", medicareFile);
 
-    if (!medicareFile) {
-      console.warn("⚠️ Medicare file missing");
-      return res.status(400).json({ message: "Medicare file is required!" });
-    }
+    // --- Extract relative file path ---
+    const extractPath = ExtractRelativeFilePath(medicareFile);
+    console.log("✅ Extracted medicare path:", extractPath);
 
-    const medicarePath = ExtractRelativeFilePath(medicareFile);
-    console.log("✅ Extracted medicare path:", medicarePath);
-
-    // 3️⃣ Check if user already exists
+    // --- Check if user already exists ---
+    console.log("🔍 Checking existing user in DB...");
     let existingUser;
     try {
-      console.log("🔍 Checking existing user in DB");
       existingUser = await UserModel.findOne({
         $or: [
           { username },
           { email },
           { idCardNumber },
-          { medicareNumber },
-          { contactNumber }
+          { medicareNumber }
         ]
       });
-      console.log("🔎 Existing user result:", existingUser);
+      console.log("🔍 Existing user found:", existingUser);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
+      }
     } catch (err) {
-      console.error("❌ MongoDB findOne failed:", err);
+      console.error("❌ MongoDB query failed:", err.stack);
       return res.status(500).json({ message: "Database query failed" });
     }
 
-    if (existingUser) {
-      console.warn("⚠️ Duplicate user found");
-      return res
-        .status(400)
-        .json({ message: "Username, email, ID card, Medicare number, or contact already exists." });
-    }
+    // --- Hash password ---
+    console.log("🔑 Hashing password...");
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4️⃣ Hash password
-    let hashedPassword;
-    try {
-      console.log("🔐 Hashing password");
-      hashedPassword = await bcrypt.hash(password, 10);
-      console.log("✅ Password hashed");
-    } catch (err) {
-      console.error("❌ Password hashing failed:", err);
-      return res.status(500).json({ message: "Failed to hash password" });
-    }
-
-    // 5️⃣ Create new user
+    // --- Create new user ---
+    console.log("🆕 Creating new user...");
     let newUser;
     try {
-      console.log("🆕 Creating new user");
       newUser = new UserModel({
         username,
         email,
@@ -324,22 +319,22 @@ const handleRegisterUser = async (req, res, next) => {
         pastOperation,
         medicines,
         healthNote,
-        medicare: medicarePath,
+        medicare: extractPath,
         password: hashedPassword
       });
       await newUser.save();
-      console.log("✅ New user saved to DB", newUser._id);
+      console.log("✅ User saved to DB:", newUser._id);
     } catch (err) {
-      console.error("❌ Failed to save user:", err);
-      return res.status(500).json({ message: "Failed to save user", error: err.message });
+      console.error("❌ Failed to save user:", err.stack);
+      return res.status(500).json({ message: "Failed to save user" });
     }
 
-    // 6️⃣ Generate JWT tokens
+    // --- Generate tokens ---
+    console.log("📝 Generating access and refresh tokens...");
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
-    console.log("🔑 Tokens generated");
 
-    // 7️⃣ Save session
+    // --- Save session info ---
     newUser.sessions = [
       {
         fcmToken,
@@ -349,50 +344,45 @@ const handleRegisterUser = async (req, res, next) => {
         createdAt: new Date()
       }
     ];
-    console.log("💾 Session saved locally");
 
-    // 8️⃣ Create Stripe customer safely
+    // --- Create Stripe customer ---
+    console.log("💳 Creating Stripe customer...");
     try {
-      console.log("💳 Creating Stripe customer");
       const customer = await stripe.customers.create({
-        email: email,
+        email,
         name: username,
         metadata: { userId: newUser._id.toString() }
       });
       newUser.customerId = customer.id;
+      await newUser.save();
       console.log("✅ Stripe customer created:", customer.id);
     } catch (err) {
-      console.error("⚠️ Stripe customer creation failed:", err);
+      console.error("❌ Stripe customer creation failed:", err.stack);
+      // continue without blocking registration
     }
 
-    await newUser.save();
-    console.log("💾 User updated with session & Stripe ID");
-
-    // 9️⃣ Fetch subscription if any
+    // --- Check subscription ---
+    console.log("🔔 Checking subscriptions...");
     let subscribedPlan = null;
     try {
-      console.log("📄 Checking for existing subscription");
       const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
       if (subscription) {
         const plan = await PlanModel.findOne({ _id: subscription.planId });
         subscribedPlan = { subscription, plan };
-        console.log("✅ Subscription found", subscribedPlan);
-      } else {
-        console.log("ℹ️ No subscription found for user");
       }
     } catch (err) {
-      console.error("⚠️ Subscription fetch failed:", err);
+      console.error("❌ Subscription lookup failed:", err.stack);
     }
 
-    // 10️⃣ Build user details response
+    // --- Prepare response user object ---
     const userDetails = {
       _id: newUser._id,
       username: newUser.username,
       email: newUser.email,
-      contactNumber: newUser.contactNumber,
       idCardNumber: newUser.idCardNumber,
-      medicareNumber: newUser.medicareNumber,
+      contactNumber: newUser.contactNumber,
       medicare: newUser.medicare,
+      medicareNumber: newUser.medicareNumber,
       dob: newUser.dob,
       address: newUser.address,
       gender: newUser.gender,
@@ -404,17 +394,18 @@ const handleRegisterUser = async (req, res, next) => {
       role: newUser.role,
       subscribedPlan
     };
-    console.log("📤 Sending final response");
 
+    console.log("✅ Registration complete for user:", newUser._id);
+
+    // --- Send response ---
     return res.status(201).json({
       message: "User registered successfully",
       accessToken,
       refreshToken,
       user: userDetails
     });
-
   } catch (error) {
-    console.error("🔥 Unhandled error in register:", error);
+    console.error("❌ Registration failed:", error.stack);
     next(error);
   }
 };
