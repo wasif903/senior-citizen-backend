@@ -1,10 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  generateOTP
-} from "../utils/TokenGenerator.js";
+import { generateAccessToken, generateRefreshToken, generateOTP } from "../utils/TokenGenerator.js";
 import AdminModel from "../models/AdminSchema.js";
 import autoMailer from "../utils/AutoMailer.js";
 import mongoose from "mongoose";
@@ -24,12 +20,10 @@ const register = async (req, res, next) => {
     const { username, email, password } = req.body;
 
     const existingUser = await AdminModel.findOne({
-      $or: [{ username }, { email }]
+      $or: [{ username }, { email }],
     });
     if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "Username or email already taken" });
+      return res.status(400).json({ message: "Username or email already taken" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -37,7 +31,7 @@ const register = async (req, res, next) => {
     const newUser = new AdminModel({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
     await newUser.save();
@@ -53,7 +47,7 @@ const register = async (req, res, next) => {
       email: newUser.email,
       role: newUser.role,
       _id: newUser._id,
-      createdAt: newUser.createdAt
+      createdAt: newUser.createdAt,
     };
 
     // Return tokens
@@ -61,7 +55,7 @@ const register = async (req, res, next) => {
       message: "User registered successfully",
       accessToken,
       refreshToken,
-      user: userDetails
+      user: userDetails,
     });
   } catch (err) {
     next(err);
@@ -71,62 +65,203 @@ const register = async (req, res, next) => {
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/user-register
-// const handleRegisterUser = async (req, res, next) => {
+const handleRegisterUser = async (req, res, next) => {
+  try {
+    const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
+    console.log(contactNumber, "-----");
+    const medicareFile = req?.files?.medicareFile?.[0];
+    console.log("Console 1");
+
+    console.log(medicareFile);
+
+    if (!medicareFile) {
+      return res.status(400).json({ message: "Medicare File is required!" });
+    }
+
+    console.log("Before Mongo findOne");
+    let check = await UserModel.findOne({ username });
+    console.log("After Mongo findOne", check);
+
+    console.log("Console 2");
+
+    const extractPath = ExtractRelativeFilePath(medicareFile);
+    console.log("Console 3");
+
+    let existingUser;
+    try {
+      existingUser = await UserModel.findOne({
+        $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
+      });
+      console.log(existingUser, "existingUser");
+    } catch (err) {
+      console.error("MongoDB query failed:", err);
+      return res.status(500).json({ message: "Database query failed" });
+    }
+
+    console.log("Console 4");
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Console 5");
+
+    let newUser;
+    try {
+      newUser = new UserModel({
+        username,
+        email,
+        contactNumber,
+        idCardNumber,
+        medicareNumber,
+        dob,
+        address,
+        gender,
+        bloodGroup,
+        pastInjury,
+        pastOperation,
+        medicines,
+        healthNote,
+        medicare: extractPath,
+        password: hashedPassword,
+      });
+      await newUser.save();
+    } catch (err) {
+      console.error("Failed to save user:", err);
+      return res.status(500).json({ message: "Failed to save user" });
+    }
+
+    console.log("Console 6");
+
+    const accessToken = generateAccessToken(newUser);
+    const refreshToken = generateRefreshToken(newUser);
+    console.log("Console 7");
+
+    newUser.sessions = [
+      {
+        fcmToken,
+        refreshToken,
+        deviceType: deviceType || "web",
+        deviceName: deviceName || req.headers["user-agent"],
+        createdAt: new Date(),
+      },
+    ];
+    console.log("Console 8");
+
+    const customerId = await stripe.customers.create({
+      email: email,
+      name: username,
+      metadata: { userId: newUser._id.toString() },
+    });
+    console.log("Console 8");
+
+    newUser.customerId = customerId.id;
+    await newUser.save();
+    console.log("Console 9");
+
+    const findSubscription = await SubscriptionModel.findOne({
+      userId: newUser._id,
+    });
+    console.log("Console 10");
+
+    let subscribedPlan;
+    if (findSubscription) {
+      const findPlan = await PlanModel.findOne({
+        _id: findSubscription.planId,
+      });
+      subscribedPlan = {
+        subscription: findSubscription,
+        plan: findPlan,
+      };
+    } else {
+      subscribedPlan = null;
+    }
+    console.log("Console 11");
+
+    const userDetails = {
+      _id: newUser._id,
+      username: newUser.username,
+      email: newUser.email,
+      idCardNumber: newUser.idCardNumber,
+      contactNumber: newUser.contactNumber,
+      medicare: newUser.medicare,
+      medicareNumber: newUser.medicareNumber,
+      dob: newUser.dob,
+      address: newUser.address,
+      gender: newUser.gender,
+      bloodGroup: newUser.bloodGroup,
+      pastInjury: newUser.pastInjury,
+      pastOperation: newUser.pastOperation,
+      medicines: newUser.medicines,
+      healthNote: newUser.healthNote,
+      role: newUser.role,
+      subscribedPlan,
+    };
+    console.log("Console 12");
+
+    res.status(201).json({
+      message: "User registered successfully",
+      accessToken,
+      refreshToken,
+      user: userDetails,
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+// const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
 //   try {
-//     const {
-//       username,
-//       email,
-//       idCardNumber,
-//       medicareNumber,
-//       dob,
-//       address,
-//       gender,
-//       bloodGroup,
-//       pastInjury,
-//       pastOperation,
-//       medicines,
-//       healthNote,
-//       password,
-//       fcmToken,
-//       deviceType,
-//       contactNumber,
-//       deviceName
-//     } = req.body;
-//     console.log(contactNumber, "-----")
+//     console.log("🚀 Registration started");
+
+//     // --- Destructure body ---
+//     let { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
+
+//     console.log("📦 Request body parsed", req.body);
+
+//     // --- Trim input to avoid spaces issues ---
+//     username = username?.trim();
+//     email = email?.trim();
+//     idCardNumber = idCardNumber?.trim();
+//     medicareNumber = medicareNumber?.trim();
+//     contactNumber = contactNumber?.trim();
+
+//     // --- Check uploaded file ---
 //     const medicareFile = req?.files?.medicareFile?.[0];
-//     console.log("Console 1")
-
-//     console.log(medicareFile)
-
 //     if (!medicareFile) {
-//       return res.status(400).json({ message: "Medicare File is required!" })
+//       console.log("❌ No medicare file uploaded");
+//       return res.status(400).json({ message: "Medicare File is required!" });
 //     }
+//     console.log("🗂 Uploaded medicareFile:", medicareFile);
 
-//     console.log("Before Mongo findOne");
-//     let check = await UserModel.findOne({ username });
-//     console.log("After Mongo findOne", check);
+//     // --- Extract relative file path ---
+//     const extractPath = ExtractRelativeFilePath(medicareFile);
+//     console.log("✅ Extracted medicare path:", extractPath);
 
-//     console.log("Console 2")
+//     const check2 = await UserModel.find();
 
-//     const extractPath = ExtractRelativeFilePath(medicareFile)
-//     console.log("Console 3")
+//     console.log("check2", check2);
 
+//     // --- Check if user already exists ---
+//     console.log("🔍 Checking existing user in DB...");
 //     let existingUser;
 //     try {
 //       existingUser = await UserModel.findOne({
-//         $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }]
+//         $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
 //       });
-//       console.log(existingUser, "existingUser");
+//       console.log("🔍 Existing user found:", existingUser);
+//       if (existingUser) {
+//         return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
+//       }
 //     } catch (err) {
-//       console.error("MongoDB query failed:", err);
+//       console.error("❌ MongoDB query failed:", err.stack);
 //       return res.status(500).json({ message: "Database query failed" });
 //     }
 
-//     console.log("Console 4")
-
+//     // --- Hash password ---
+//     console.log("🔑 Hashing password...");
 //     const hashedPassword = await bcrypt.hash(password, 10);
-//     console.log("Console 5")
 
+//     // --- Create new user ---
+//     console.log("🆕 Creating new user...");
 //     let newUser;
 //     try {
 //       newUser = new UserModel({
@@ -144,61 +279,61 @@ const register = async (req, res, next) => {
 //         medicines,
 //         healthNote,
 //         medicare: extractPath,
-//         password: hashedPassword
+//         password: hashedPassword,
 //       });
 //       await newUser.save();
+//       console.log("✅ User saved to DB:", newUser._id);
 //     } catch (err) {
-//       console.error("Failed to save user:", err);
+//       console.error("❌ Failed to save user:", err.stack);
 //       return res.status(500).json({ message: "Failed to save user" });
 //     }
 
-//     console.log("Console 6")
-
+//     // --- Generate tokens ---
+//     console.log("📝 Generating access and refresh tokens...");
 //     const accessToken = generateAccessToken(newUser);
 //     const refreshToken = generateRefreshToken(newUser);
-//     console.log("Console 7")
 
+//     // --- Save session info ---
 //     newUser.sessions = [
 //       {
 //         fcmToken,
 //         refreshToken,
 //         deviceType: deviceType || "web",
 //         deviceName: deviceName || req.headers["user-agent"],
-//         createdAt: new Date()
-//       }
+//         createdAt: new Date(),
+//       },
 //     ];
-//     console.log("Console 8")
 
-//     const customerId = await stripe.customers.create({
-//       email: email,
-//       name: username,
-//       metadata: { userId: newUser._id.toString() }
-//     });
-//     console.log("Console 8")
-
-//     newUser.customerId = customerId.id;
-//     await newUser.save();
-//     console.log("Console 9")
-
-//     const findSubscription = await SubscriptionModel.findOne({
-//       userId: newUser._id
-//     });
-//     console.log("Console 10")
-
-//     let subscribedPlan;
-//     if (findSubscription) {
-//       const findPlan = await PlanModel.findOne({
-//         _id: findSubscription.planId
+//     // --- Create Stripe customer ---
+//     console.log("💳 Creating Stripe customer...");
+//     try {
+//       const customer = await stripe.customers.create({
+//         email,
+//         name: username,
+//         metadata: { userId: newUser._id.toString() },
 //       });
-//       subscribedPlan = {
-//         subscription: findSubscription,
-//         plan: findPlan
-//       };
-//     } else {
-//       subscribedPlan = null;
+//       newUser.customerId = customer.id;
+//       await newUser.save();
+//       console.log("✅ Stripe customer created:", customer.id);
+//     } catch (err) {
+//       console.error("❌ Stripe customer creation failed:", err.stack);
+//       // continue without blocking registration
 //     }
-//     console.log("Console 11")
 
+//     // --- Check subscription ---
+//     console.log("🔔 Checking subscriptions...");
+//     let subscribedPlan = null;
+//     try {
+//       const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
+//       if (subscription) {
+//         const plan = await PlanModel.findOne({ _id: subscription.planId });
+//         subscribedPlan = { subscription, plan };
+//       }
+//     } catch (err) {
+//       console.error("❌ Subscription lookup failed:", err.stack);
+//     }
+
+//     // --- Prepare response user object ---
 //     const userDetails = {
 //       _id: newUser._id,
 //       username: newUser.username,
@@ -216,205 +351,23 @@ const register = async (req, res, next) => {
 //       medicines: newUser.medicines,
 //       healthNote: newUser.healthNote,
 //       role: newUser.role,
-//       subscribedPlan
+//       subscribedPlan,
 //     };
-//     console.log("Console 12")
 
-//     res.status(201).json({
+//     console.log("✅ Registration complete for user:", newUser._id);
+
+//     // --- Send response ---
+//     return res.status(201).json({
 //       message: "User registered successfully",
 //       accessToken,
 //       refreshToken,
-//       user: userDetails
+//       user: userDetails,
 //     });
 //   } catch (error) {
-//     console.log(error);
+//     console.error("❌ Registration failed:", error.stack);
 //     next(error);
 //   }
-// };
-const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
-  try {
-    console.log("🚀 Registration started");
-
-    // --- Destructure body ---
-    let {
-      username,
-      email,
-      idCardNumber,
-      medicareNumber,
-      dob,
-      address,
-      gender,
-      bloodGroup,
-      pastInjury,
-      pastOperation,
-      medicines,
-      healthNote,
-      password,
-      fcmToken,
-      deviceType,
-      contactNumber,
-      deviceName
-    } = req.body;
-
-    console.log("📦 Request body parsed", req.body);
-
-    // --- Trim input to avoid spaces issues ---
-    username = username?.trim();
-    email = email?.trim();
-    idCardNumber = idCardNumber?.trim();
-    medicareNumber = medicareNumber?.trim();
-    contactNumber = contactNumber?.trim();
-
-    // --- Check uploaded file ---
-    const medicareFile = req?.files?.medicareFile?.[0];
-    if (!medicareFile) {
-      console.log("❌ No medicare file uploaded");
-      return res.status(400).json({ message: "Medicare File is required!" });
-    }
-    console.log("🗂 Uploaded medicareFile:", medicareFile);
-
-    // --- Extract relative file path ---
-    const extractPath = ExtractRelativeFilePath(medicareFile);
-    console.log("✅ Extracted medicare path:", extractPath);
-
-    // const check2 = await UserModel.find();
-
-    // console.log("check2", check2)
-
-    // // --- Check if user already exists ---
-    // console.log("🔍 Checking existing user in DB...");
-    // let existingUser;
-    // try {
-    //   existingUser = await UserModel.findOne({
-    //     $or: [
-    //       { username },
-    //       { email },
-    //       { idCardNumber },
-    //       { medicareNumber }
-    //     ]
-    //   });
-    //   console.log("🔍 Existing user found:", existingUser);
-    //   if (existingUser) {
-    //     return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
-    //   }
-    // } catch (err) {
-    //   console.error("❌ MongoDB query failed:", err.stack);
-    //   return res.status(500).json({ message: "Database query failed" });
-    // }
-
-    // // --- Hash password ---
-    // console.log("🔑 Hashing password...");
-    // const hashedPassword = await bcrypt.hash(password, 10);
-
-    // // --- Create new user ---
-    // console.log("🆕 Creating new user...");
-    // let newUser;
-    // try {
-    //   newUser = new UserModel({
-    //     username,
-    //     email,
-    //     contactNumber,
-    //     idCardNumber,
-    //     medicareNumber,
-    //     dob,
-    //     address,
-    //     gender,
-    //     bloodGroup,
-    //     pastInjury,
-    //     pastOperation,
-    //     medicines,
-    //     healthNote,
-    //     medicare: extractPath,
-    //     password: hashedPassword
-    //   });
-    //   await newUser.save();
-    //   console.log("✅ User saved to DB:", newUser._id);
-    // } catch (err) {
-    //   console.error("❌ Failed to save user:", err.stack);
-    //   return res.status(500).json({ message: "Failed to save user" });
-    // }
-
-    // // --- Generate tokens ---
-    // console.log("📝 Generating access and refresh tokens...");
-    // const accessToken = generateAccessToken(newUser);
-    // const refreshToken = generateRefreshToken(newUser);
-
-    // // --- Save session info ---
-    // newUser.sessions = [
-    //   {
-    //     fcmToken,
-    //     refreshToken,
-    //     deviceType: deviceType || "web",
-    //     deviceName: deviceName || req.headers["user-agent"],
-    //     createdAt: new Date()
-    //   }
-    // ];
-
-    // // --- Create Stripe customer ---
-    // console.log("💳 Creating Stripe customer...");
-    // try {
-    //   const customer = await stripe.customers.create({
-    //     email,
-    //     name: username,
-    //     metadata: { userId: newUser._id.toString() }
-    //   });
-    //   newUser.customerId = customer.id;
-    //   await newUser.save();
-    //   console.log("✅ Stripe customer created:", customer.id);
-    // } catch (err) {
-    //   console.error("❌ Stripe customer creation failed:", err.stack);
-    //   // continue without blocking registration
-    // }
-
-    // // --- Check subscription ---
-    // console.log("🔔 Checking subscriptions...");
-    // let subscribedPlan = null;
-    // try {
-    //   const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
-    //   if (subscription) {
-    //     const plan = await PlanModel.findOne({ _id: subscription.planId });
-    //     subscribedPlan = { subscription, plan };
-    //   }
-    // } catch (err) {
-    //   console.error("❌ Subscription lookup failed:", err.stack);
-    // }
-
-    // // --- Prepare response user object ---
-    // const userDetails = {
-    //   _id: newUser._id,
-    //   username: newUser.username,
-    //   email: newUser.email,
-    //   idCardNumber: newUser.idCardNumber,
-    //   contactNumber: newUser.contactNumber,
-    //   medicare: newUser.medicare,
-    //   medicareNumber: newUser.medicareNumber,
-    //   dob: newUser.dob,
-    //   address: newUser.address,
-    //   gender: newUser.gender,
-    //   bloodGroup: newUser.bloodGroup,
-    //   pastInjury: newUser.pastInjury,
-    //   pastOperation: newUser.pastOperation,
-    //   medicines: newUser.medicines,
-    //   healthNote: newUser.healthNote,
-    //   role: newUser.role,
-    //   subscribedPlan
-    // };
-
-    // console.log("✅ Registration complete for user:", newUser._id);
-
-    // --- Send response ---
-    return res.status(201).json({
-      message: "User registered successfully",
-      // accessToken,
-      // refreshToken,
-      // user: userDetails
-    });
-  } catch (error) {
-    console.error("❌ Registration failed:", error.stack);
-    next(error);
-  }
-})
-
+// });
 
 // LOGIN
 // METHOD : POST
@@ -425,10 +378,10 @@ const login = async (req, res, next) => {
 
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -454,7 +407,7 @@ const login = async (req, res, next) => {
         email: user.email,
         role: user.role,
         _id: user._id,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       };
     } else if (user.role.includes("User")) {
       // 4️⃣ Save refresh token & session info
@@ -466,7 +419,7 @@ const login = async (req, res, next) => {
         fcmToken: fcmToken || null,
         deviceType: deviceType || "web",
         deviceName: deviceName || "web",
-        createdAt: new Date()
+        createdAt: new Date(),
       };
       user.sessions.push(sessionData);
 
@@ -474,17 +427,17 @@ const login = async (req, res, next) => {
       await user.save();
 
       const findSubscription = await SubscriptionModel.findOne({
-        userId: user._id
+        userId: user._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -506,7 +459,7 @@ const login = async (req, res, next) => {
         healthNote: user.healthNote,
         createdAt: user.createdAt,
         role: user.role,
-        subscribedPlan
+        subscribedPlan,
       };
     }
 
@@ -514,10 +467,10 @@ const login = async (req, res, next) => {
       message: "Logged In Successfully",
       accessToken,
       refreshToken,
-      user: details
+      user: details,
     });
   } catch (err) {
-    console.log(err)
+    console.log(err);
     next(err);
   }
 };
@@ -535,9 +488,7 @@ const refreshToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = (await AdminModel.findById(decoded.id)) || (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -552,7 +503,7 @@ const refreshToken = async (req, res, next) => {
       }
     } else if (user.role === "User") {
       // ✅ Check if token exists in any session
-      const session = user.sessions.find(s => s.refreshToken === token);
+      const session = user.sessions.find((s) => s.refreshToken === token);
       if (!session) {
         return res.status(403).json({ message: "Invalid refresh token" });
       }
@@ -580,9 +531,7 @@ const logout = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await AdminModel.findById(decoded.id)) ||
-      (await UserModel.findById(decoded.id));
+    const user = (await AdminModel.findById(decoded.id)) || (await UserModel.findById(decoded.id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -592,7 +541,7 @@ const logout = async (req, res, next) => {
       await user.save();
       return res.status(200).json({ message: "Logged out successfully" });
     } else if (user.role === "User") {
-      user.sessions = user.sessions.filter(s => s.refreshToken !== token);
+      user.sessions = user.sessions.filter((s) => s.refreshToken !== token);
       await user.save();
       return res.status(200).json({ message: "Logged out successfully" });
     } else {
@@ -612,10 +561,10 @@ const forgetPassword = async (req, res, next) => {
     const { identifier } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -631,7 +580,7 @@ const forgetPassword = async (req, res, next) => {
     autoMailer({
       to: user.email,
       subject: "Password Reset OTP",
-      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
+      message: `<p>Your OTP for password reset is: <b>${otp}</b>. It will expire in 10 minutes.</p>`,
     });
 
     res.status(200).json({ message: "OTP sent to your email.", identifier });
@@ -648,10 +597,10 @@ const verifyOtp = async (req, res, next) => {
     const { identifier, otp } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -680,10 +629,10 @@ const changePassword = async (req, res, next) => {
     const { identifier, otp, newPassword } = req.body;
     const user =
       (await AdminModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       })) ||
       (await UserModel.findOne({
-        $or: [{ email: identifier }, { username: identifier }]
+        $or: [{ email: identifier }, { username: identifier }],
       }));
 
     if (!user) {
@@ -715,8 +664,7 @@ const HandleUpdateProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const user =
-      (await AdminModel.findById(id)) || (await UserModel.findById(id));
+    const user = (await AdminModel.findById(id)) || (await UserModel.findById(id));
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -733,16 +681,14 @@ const HandleUpdateProfile = async (req, res, next) => {
       const existingUser =
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         })) ||
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         }));
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Username or email already taken" });
+        return res.status(400).json({ message: "Username or email already taken" });
       }
       user.username = username;
       user.email = email;
@@ -760,29 +706,12 @@ const HandleUpdateProfile = async (req, res, next) => {
         email: user.email,
         role: user.role,
         _id: user._id,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
       };
 
-      return res
-        .status(200)
-        .json({ message: "Profile Updated Successfully", user: details });
+      return res.status(200).json({ message: "Profile Updated Successfully", user: details });
     } else if (user.role === "User") {
-      const {
-        username,
-        email,
-        idCardNumber,
-        medicareNumber,
-        dob,
-        address,
-        gender,
-        bloodGroup,
-        pastInjury,
-        pastOperation,
-        medicines,
-        healthNote,
-        password,
-        timezone
-      } = req.body;
+      const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, timezone } = req.body;
 
       // Build dynamic $or conditions
       const userOrConditions = [];
@@ -794,16 +723,14 @@ const HandleUpdateProfile = async (req, res, next) => {
       const existingUser =
         (await UserModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         })) ||
         (await AdminModel.findOne({
           _id: { $ne: id },
-          $or: userOrConditions
+          $or: userOrConditions,
         }));
       if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "Username or email already taken" });
+        return res.status(400).json({ message: "Username or email already taken" });
       }
 
       user.username = username || user.username;
@@ -824,17 +751,17 @@ const HandleUpdateProfile = async (req, res, next) => {
       await user.save();
 
       const findSubscription = await SubscriptionModel.findOne({
-        userId: user._id
+        userId: user._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -855,11 +782,9 @@ const HandleUpdateProfile = async (req, res, next) => {
         medicines: user.medicines,
         healthNote: user.healthNote,
         createdAt: user.createdAt,
-        subscribedPlan
+        subscribedPlan,
       };
-      return res
-        .status(200)
-        .json({ message: "Profile Updated Successfully", user: details });
+      return res.status(200).json({ message: "Profile Updated Successfully", user: details });
     } else {
       res.status(400).json({ message: "Invalid Request" });
     }
@@ -874,13 +799,7 @@ const HandleUpdateProfile = async (req, res, next) => {
 const handleGetUserProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const findUser =
-      (await UserModel.findById(id).select(
-        "-sessions -password -otp -otpExpire"
-      )) ||
-      (await AdminModel.findById(id).select(
-        "-password -otp -otpExpire -refreshToken"
-      ));
+    const findUser = (await UserModel.findById(id).select("-sessions -password -otp -otpExpire")) || (await AdminModel.findById(id).select("-password -otp -otpExpire -refreshToken"));
 
     if (!findUser) {
       return res.status(404).json({ message: "User Not Found" });
@@ -888,17 +807,17 @@ const handleGetUserProfile = async (req, res, next) => {
 
     if (findUser.role === "User") {
       const findSubscription = await SubscriptionModel.findOne({
-        userId: findUser._id
+        userId: findUser._id,
       });
 
       let subscribedPlan;
       if (findSubscription) {
         const findPlan = await PlanModel.findOne({
-          _id: findSubscription.planId
+          _id: findSubscription.planId,
         });
         subscribedPlan = {
           subscription: findSubscription,
-          plan: findPlan
+          plan: findPlan,
         };
       } else {
         subscribedPlan = null;
@@ -923,7 +842,7 @@ const handleGetUserProfile = async (req, res, next) => {
         healthNote: findUser.healthNote,
         createdAt: findUser.createdAt,
         role: findUser.role,
-        subscribedPlan
+        subscribedPlan,
       };
 
       return res.status(200).json({ user: details });
@@ -953,14 +872,14 @@ const handleGetUsers = async (req, res, next) => {
           from: "subscriptions",
           localField: "_id",
           foreignField: "userId",
-          as: "subscription"
-        }
+          as: "subscription",
+        },
       },
       {
         $unwind: {
           path: "$subscription",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
 
       {
@@ -968,15 +887,15 @@ const handleGetUsers = async (req, res, next) => {
           from: "plans",
           localField: "subscription.planId",
           foreignField: "_id",
-          as: "plan"
-        }
+          as: "plan",
+        },
       },
 
       {
         $unwind: {
           path: "$plan",
-          preserveNullAndEmptyArrays: true
-        }
+          preserveNullAndEmptyArrays: true,
+        },
       },
       {
         $project: {
@@ -999,9 +918,9 @@ const handleGetUsers = async (req, res, next) => {
           healthNote: 1,
           createdAt: 1,
           subscription: 1,
-          plan: 1
-        }
-      }
+          plan: 1,
+        },
+      },
     ];
 
     if (matchStage) pipeline.push(matchStage);
@@ -1026,8 +945,8 @@ const handleGetUsers = async (req, res, next) => {
         totalItems,
         totalPages,
         page,
-        limit
-      }
+        limit,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -1050,14 +969,12 @@ const handleGetAdminDashboard = async (req, res, next) => {
     // Total Users
     const totalUserPipeline = [{ $count: "totalItems" }];
     const totalUserCountRes = await UserModel.aggregate(totalUserPipeline);
-    const totalUsers =
-      totalUserCountRes.length > 0 ? totalUserCountRes[0].totalItems : 0;
+    const totalUsers = totalUserCountRes.length > 0 ? totalUserCountRes[0].totalItems : 0;
 
     // Total Pricing Plans
     const totalPlanPipeline = [{ $count: "totalItems" }];
     const totalPlanCountRes = await PlanModel.aggregate(totalPlanPipeline);
-    const totalPlans =
-      totalPlanCountRes.length > 0 ? totalPlanCountRes[0].totalItems : 0;
+    const totalPlans = totalPlanCountRes.length > 0 ? totalPlanCountRes[0].totalItems : 0;
 
     // Upcoming Reminders
     const currDateTime = new Date();
@@ -1065,37 +982,30 @@ const handleGetAdminDashboard = async (req, res, next) => {
       {
         $match: {
           appointmentDate: {
-            $gte: currDateTime
-          }
-        }
+            $gte: currDateTime,
+          },
+        },
       },
-      { $count: "totalItems" }
+      { $count: "totalItems" },
     ];
-    const totalUpcomingRemindersCount = await ReminderModel.aggregate(
-      totalUpcomingReminders
-    );
-    const UpcomingReminders =
-      totalUpcomingRemindersCount.length > 0
-        ? totalUpcomingRemindersCount[0].totalItems
-        : 0;
+    const totalUpcomingRemindersCount = await ReminderModel.aggregate(totalUpcomingReminders);
+    const UpcomingReminders = totalUpcomingRemindersCount.length > 0 ? totalUpcomingRemindersCount[0].totalItems : 0;
 
     // Total Reminders
     const totalReminders = [{ $count: "totalItems" }];
     const totalRemindersCount = await ReminderModel.aggregate(totalReminders);
-    const Reminders =
-      totalRemindersCount.length > 0 ? totalRemindersCount[0].totalItems : 0;
+    const Reminders = totalRemindersCount.length > 0 ? totalRemindersCount[0].totalItems : 0;
 
     res.status(200).json({
       totalUsers: totalUsers,
       totalPlans: totalPlans,
       UpcomingReminders,
-      totalReminders: Reminders
+      totalReminders: Reminders,
     });
   } catch (error) {
     next(error);
   }
 };
-
 
 // UPDATE PASSWORD
 // METHOD : PATCH
@@ -1106,7 +1016,7 @@ const handleUpdatePassword = async (req, res, next) => {
     const { password, newPass } = req.body;
     const user = await UserModel.findById(id);
     if (!user) {
-      return res.status(404).json({ message: "User Not Found" })
+      return res.status(404).json({ message: "User Not Found" });
     }
     if (password && password !== "" && newPass && newPass !== "") {
       const isMatch = await bcrypt.compare(password, user.password);
@@ -1116,15 +1026,12 @@ const handleUpdatePassword = async (req, res, next) => {
       user.password = await bcrypt.hash(newPass, 10);
     }
     await user.save();
-    return res
-      .status(200)
-      .json({ message: "Password Updated Successfully" });
+    return res.status(200).json({ message: "Password Updated Successfully" });
   } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
-}
-
+};
 
 // UPDATE TIMEZONE
 // METHOD : PATCH
@@ -1139,42 +1046,24 @@ const handleUpdateTimezone = async (req, res, next) => {
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    const user =
-      (await UserModel.findById(decoded.id));
+    const user = await UserModel.findById(decoded.id);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const session = user.sessions.find(s => s.refreshToken === refreshToken);
+    const session = user.sessions.find((s) => s.refreshToken === refreshToken);
     if (!session) {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
-    session.timezone = timezone
+    session.timezone = timezone;
     await session.save();
 
-    res.status(200).json({ message: "Timezone Updated Successfully" })
-
+    res.status(200).json({ message: "Timezone Updated Successfully" });
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
-
-
-export {
-  register,
-  login,
-  logout,
-  refreshToken,
-  forgetPassword,
-  verifyOtp,
-  changePassword,
-  HandleUpdateProfile,
-  handleRegisterUser,
-  handleGetUserProfile,
-  handleGetUsers,
-  handleGetAdminDashboard,
-  handleUpdatePassword,
-  handleUpdateTimezone
 };
+
+export { register, login, logout, refreshToken, forgetPassword, verifyOtp, changePassword, HandleUpdateProfile, handleRegisterUser, handleGetUserProfile, handleGetUsers, handleGetAdminDashboard, handleUpdatePassword, handleUpdateTimezone };
