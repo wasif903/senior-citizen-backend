@@ -15,6 +15,7 @@ import PlanModel from "../models/PlanScheme.js";
 import SearchQuery from "../utils/SearchQuery.js";
 import ReminderModel from "../models/ReminderSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
+import expressAsyncHandler from "express-async-handler";
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/register
@@ -230,7 +231,7 @@ const register = async (req, res, next) => {
 //     next(error);
 //   }
 // };
-const handleRegisterUser = async (req, res, next) => {
+const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
   try {
     console.log("🚀 Registration started");
 
@@ -408,7 +409,7 @@ const handleRegisterUser = async (req, res, next) => {
     console.error("❌ Registration failed:", error.stack);
     next(error);
   }
-};
+})
 
 
 // LOGIN
