@@ -33,12 +33,7 @@ router.post("/register", validate(adminSchema), register);
 
 router.post(
   "/user-register",
-  CreateUploadMiddleware([
-    {
-      name: "medicareFile",
-      isMultiple: false
-    }
-  ]),
+  CreateUploadMiddleware([{ name: "medicareFile", isMultiple: false }]),
   handleRegisterUser
 );
 
