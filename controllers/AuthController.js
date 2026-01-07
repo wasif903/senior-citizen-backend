@@ -256,6 +256,7 @@ const handleRegisterUser = async (req, res, next) => {
     } = req.body;
     console.log("📦 Request body parsed", { username, email, idCardNumber, medicareNumber });
 
+    console.log(req.body, "body")
     // 2️⃣ Validate uploaded file
     const medicareFile = req?.files?.medicareFile?.[0];
     console.log("🗂 Uploaded medicareFile:", medicareFile);
