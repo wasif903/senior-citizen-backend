@@ -11,6 +11,7 @@ import PlanModel from "../models/PlanScheme.js";
 import SearchQuery from "../utils/SearchQuery.js";
 import ReminderModel from "../models/ReminderSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
+import expressAsyncHandler from "express-async-handler";
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/register
@@ -67,8 +68,9 @@ const register = async (req, res, next) => {
 const handleRegisterUser = async (req, res, next) => {
   try {
     const { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
-
+    console.log(contactNumber, "-----");
     const medicareFile = req?.files?.medicareFile?.[0];
+    console.log("Console 1");
 
     console.log(medicareFile);
 
@@ -76,38 +78,61 @@ const handleRegisterUser = async (req, res, next) => {
       return res.status(400).json({ message: "Medicare File is required!" });
     }
 
-    const extractPath = ExtractRelativeFilePath(medicareFile);
+    console.log("Before Mongo findOne");
+    let check = await UserModel.findOne({ username });
+    console.log("After Mongo findOne", check);
 
-    const existingUser = await UserModel.findOne({
-      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
-    });
-    if (existingUser) {
-      return res.status(400).json({ message: "Username or email already taken" });
+    console.log("Console 2");
+
+    const extractPath = ExtractRelativeFilePath(medicareFile);
+    console.log("Console 3");
+
+    let existingUser;
+    try {
+      existingUser = await UserModel.findOne({
+        $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
+      });
+      console.log(existingUser, "existingUser");
+    } catch (err) {
+      console.error("MongoDB query failed:", err);
+      return res.status(500).json({ message: "Database query failed" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Console 4");
 
-    const newUser = new UserModel({
-      username,
-      email,
-      contactNumber,
-      idCardNumber,
-      medicareNumber,
-      dob,
-      address,
-      gender,
-      bloodGroup,
-      pastInjury,
-      pastOperation,
-      medicines,
-      healthNote,
-      medicare: extractPath,
-      password: hashedPassword,
-    });
-    await newUser.save();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Console 5");
+
+    let newUser;
+    try {
+      newUser = new UserModel({
+        username,
+        email,
+        contactNumber,
+        idCardNumber,
+        medicareNumber,
+        dob,
+        address,
+        gender,
+        bloodGroup,
+        pastInjury,
+        pastOperation,
+        medicines,
+        healthNote,
+        medicare: extractPath,
+        password: hashedPassword,
+      });
+      await newUser.save();
+    } catch (err) {
+      console.error("Failed to save user:", err);
+      return res.status(500).json({ message: "Failed to save user" });
+    }
+
+    console.log("Console 6");
 
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
+    console.log("Console 7");
 
     newUser.sessions = [
       {
@@ -118,19 +143,23 @@ const handleRegisterUser = async (req, res, next) => {
         createdAt: new Date(),
       },
     ];
+    console.log("Console 8");
 
     const customerId = await stripe.customers.create({
       email: email,
       name: username,
       metadata: { userId: newUser._id.toString() },
     });
+    console.log("Console 8");
 
     newUser.customerId = customerId.id;
     await newUser.save();
+    console.log("Console 9");
 
     const findSubscription = await SubscriptionModel.findOne({
       userId: newUser._id,
     });
+    console.log("Console 10");
 
     let subscribedPlan;
     if (findSubscription) {
@@ -144,6 +173,7 @@ const handleRegisterUser = async (req, res, next) => {
     } else {
       subscribedPlan = null;
     }
+    console.log("Console 11");
 
     const userDetails = {
       _id: newUser._id,
@@ -164,6 +194,7 @@ const handleRegisterUser = async (req, res, next) => {
       role: newUser.role,
       subscribedPlan,
     };
+    console.log("Console 12");
 
     res.status(201).json({
       message: "User registered successfully",
@@ -176,6 +207,167 @@ const handleRegisterUser = async (req, res, next) => {
     next(error);
   }
 };
+
+// const handleRegisterUser = expressAsyncHandler(async (req, res, next) => {
+//   try {
+//     console.log("🚀 Registration started");
+
+//     // --- Destructure body ---
+//     let { username, email, idCardNumber, medicareNumber, dob, address, gender, bloodGroup, pastInjury, pastOperation, medicines, healthNote, password, fcmToken, deviceType, contactNumber, deviceName } = req.body;
+
+//     console.log("📦 Request body parsed", req.body);
+
+//     // --- Trim input to avoid spaces issues ---
+//     username = username?.trim();
+//     email = email?.trim();
+//     idCardNumber = idCardNumber?.trim();
+//     medicareNumber = medicareNumber?.trim();
+//     contactNumber = contactNumber?.trim();
+
+//     // --- Check uploaded file ---
+//     const medicareFile = req?.files?.medicareFile?.[0];
+//     if (!medicareFile) {
+//       console.log("❌ No medicare file uploaded");
+//       return res.status(400).json({ message: "Medicare File is required!" });
+//     }
+//     console.log("🗂 Uploaded medicareFile:", medicareFile);
+
+//     // --- Extract relative file path ---
+//     const extractPath = ExtractRelativeFilePath(medicareFile);
+//     console.log("✅ Extracted medicare path:", extractPath);
+
+//     const check2 = await UserModel.find();
+
+//     console.log("check2", check2);
+
+//     // --- Check if user already exists ---
+//     console.log("🔍 Checking existing user in DB...");
+//     let existingUser;
+//     try {
+//       existingUser = await UserModel.findOne({
+//         $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
+//       });
+//       console.log("🔍 Existing user found:", existingUser);
+//       if (existingUser) {
+//         return res.status(400).json({ message: "Username, email, ID card, or Medicare number already taken" });
+//       }
+//     } catch (err) {
+//       console.error("❌ MongoDB query failed:", err.stack);
+//       return res.status(500).json({ message: "Database query failed" });
+//     }
+
+//     // --- Hash password ---
+//     console.log("🔑 Hashing password...");
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // --- Create new user ---
+//     console.log("🆕 Creating new user...");
+//     let newUser;
+//     try {
+//       newUser = new UserModel({
+//         username,
+//         email,
+//         contactNumber,
+//         idCardNumber,
+//         medicareNumber,
+//         dob,
+//         address,
+//         gender,
+//         bloodGroup,
+//         pastInjury,
+//         pastOperation,
+//         medicines,
+//         healthNote,
+//         medicare: extractPath,
+//         password: hashedPassword,
+//       });
+//       await newUser.save();
+//       console.log("✅ User saved to DB:", newUser._id);
+//     } catch (err) {
+//       console.error("❌ Failed to save user:", err.stack);
+//       return res.status(500).json({ message: "Failed to save user" });
+//     }
+
+//     // --- Generate tokens ---
+//     console.log("📝 Generating access and refresh tokens...");
+//     const accessToken = generateAccessToken(newUser);
+//     const refreshToken = generateRefreshToken(newUser);
+
+//     // --- Save session info ---
+//     newUser.sessions = [
+//       {
+//         fcmToken,
+//         refreshToken,
+//         deviceType: deviceType || "web",
+//         deviceName: deviceName || req.headers["user-agent"],
+//         createdAt: new Date(),
+//       },
+//     ];
+
+//     // --- Create Stripe customer ---
+//     console.log("💳 Creating Stripe customer...");
+//     try {
+//       const customer = await stripe.customers.create({
+//         email,
+//         name: username,
+//         metadata: { userId: newUser._id.toString() },
+//       });
+//       newUser.customerId = customer.id;
+//       await newUser.save();
+//       console.log("✅ Stripe customer created:", customer.id);
+//     } catch (err) {
+//       console.error("❌ Stripe customer creation failed:", err.stack);
+//       // continue without blocking registration
+//     }
+
+//     // --- Check subscription ---
+//     console.log("🔔 Checking subscriptions...");
+//     let subscribedPlan = null;
+//     try {
+//       const subscription = await SubscriptionModel.findOne({ userId: newUser._id });
+//       if (subscription) {
+//         const plan = await PlanModel.findOne({ _id: subscription.planId });
+//         subscribedPlan = { subscription, plan };
+//       }
+//     } catch (err) {
+//       console.error("❌ Subscription lookup failed:", err.stack);
+//     }
+
+//     // --- Prepare response user object ---
+//     const userDetails = {
+//       _id: newUser._id,
+//       username: newUser.username,
+//       email: newUser.email,
+//       idCardNumber: newUser.idCardNumber,
+//       contactNumber: newUser.contactNumber,
+//       medicare: newUser.medicare,
+//       medicareNumber: newUser.medicareNumber,
+//       dob: newUser.dob,
+//       address: newUser.address,
+//       gender: newUser.gender,
+//       bloodGroup: newUser.bloodGroup,
+//       pastInjury: newUser.pastInjury,
+//       pastOperation: newUser.pastOperation,
+//       medicines: newUser.medicines,
+//       healthNote: newUser.healthNote,
+//       role: newUser.role,
+//       subscribedPlan,
+//     };
+
+//     console.log("✅ Registration complete for user:", newUser._id);
+
+//     // --- Send response ---
+//     return res.status(201).json({
+//       message: "User registered successfully",
+//       accessToken,
+//       refreshToken,
+//       user: userDetails,
+//     });
+//   } catch (error) {
+//     console.error("❌ Registration failed:", error.stack);
+//     next(error);
+//   }
+// });
 
 // LOGIN
 // METHOD : POST

@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 // Middlewares
 import ErrorHandler from "./middlewares/ErrorHandler.js";
 import ErrorLogger from "./middlewares/ErrorLogger.js";
-import RateLimiter from "./middlewares/RateLimiter.js";
+// import RateLimiter from "./middlewares/RateLimiter.js";
 import SecurityHeaders from "./middlewares/HelmetMiddleware.js";
 import qs from "qs";
 
@@ -36,6 +36,12 @@ dotenv.config();
 
 const app = express();
 
+console.log("TRUST PROXY VALUE:", app.get("trust proxy"));
+
+app.set("trust proxy", 1);
+
+console.log("TRUST PROXY AFTER SET:", app.get("trust proxy"));
+
 const httpServer = createServer(app);
 
 app.use(SecurityHeaders);
@@ -56,7 +62,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["POST", "GET", "PATCH", "DELETE"]
+    methods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"]
   })
 );
 
@@ -79,6 +85,13 @@ app.use(
 );
 
 // === Rate Limiter
+import rateLimit from "express-rate-limit";
+
+const RateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+
 app.use(RateLimiter);
 
 // === Logger Middleware for logging errors

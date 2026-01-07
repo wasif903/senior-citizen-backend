@@ -12,7 +12,7 @@ const SessionSchema = new Schema(
     },
     timezone: {
       type: String,
-      default: "UTC" // e.g. "Asia/Karachi"
+      default: "UTC", // e.g. "Asia/Karachi"
     },
     deviceName: { type: String },
     lastActive: { type: Date, default: Date.now },
@@ -32,19 +32,15 @@ const UserSchema = new Schema(
     },
     email: {
       type: String,
-      unique: true,
     },
     contactNumber: {
       type: String,
-      unique: true,
     },
     idCardNumber: {
       type: String,
-      unique: true,
     },
     medicareNumber: {
       type: String,
-      unique: true,
     },
     dob: {
       type: String,
