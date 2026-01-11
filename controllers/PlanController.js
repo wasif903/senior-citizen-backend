@@ -164,34 +164,44 @@ const handleGetPlans = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const search = req.query.search || {};
-    const matchStage = SearchQuery(search);
+    const matchStage = SearchQuery(search); // your existing search function
 
     const pipeline = [];
 
-    // if (matchStage) pipeline.push(matchStage);
+    // Build the match stage
+    let matchConditions = { active: true }; // only active plans by default
 
     if (matchStage) {
       const conditions = matchStage.$match || {};
-      pipeline.push({
-        $match: {
-          $or: [conditions, { amount: 0 }]
-        }
-      });
-    } else {
-      pipeline.push({
-        $match: { amount: 0 }
-      });
+      // include search conditions + always active plans + free plan (amount: 0)
+      matchConditions = {
+        ...conditions,
+        active: true,
+      };
     }
 
-    pipeline.push({ $sort: { createdAt: -1 } });
+    // Add the match stage
+    pipeline.push({
+      $match: {
+        $or: [matchConditions, { amount: 0 }]
+      }
+    });
 
+    // Sorting, skipping, limiting
+    pipeline.push({ $sort: { createdAt: -1 } });
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: limit });
 
+    // Run aggregation
     const plans = await PlanModel.aggregate(pipeline);
 
+    // Count total items
     const countPipeline = [];
-    if (matchStage) countPipeline.push(matchStage);
+    if (matchStage) {
+      countPipeline.push({ $match: matchConditions });
+    } else {
+      countPipeline.push({ $match: { active: true } });
+    }
     countPipeline.push({ $count: "totalItems" });
 
     const countResult = await PlanModel.aggregate(countPipeline);
@@ -212,5 +222,6 @@ const handleGetPlans = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export { createProductAndPrice, handleGetPlans };
