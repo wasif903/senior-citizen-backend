@@ -52,6 +52,33 @@ export const handleStripeWebhook = async (req, res) => {
         break;
       }
 
+      case "customer.subscription.deleted": {
+        const sub = event.data.object;
+
+        const dbSub = await SubscriptionModel.findOne({
+          stripeSubscriptionId: sub.id
+        });
+
+        if (!dbSub) break;
+
+        const freePlan = await PlanModel.findOne({ amount: 0 });
+
+        await SubscriptionModel.findByIdAndUpdate(dbSub._id, {
+          planId: freePlan._id,
+          stripeSubscriptionId: null,
+          downgradeScheduled: false,
+          downgradeRequestedAt: null,
+          downgradeMessage: "",
+          endDate: null,
+          currentPeriodEnd: null,
+          status: "active"
+        });
+
+        break;
+      }
+
+
+
       // ✅ Subscription Updated
       case "customer.subscription.updated": {
         const updatedSub = event.data.object;
@@ -99,16 +126,16 @@ export const handleStripeWebhook = async (req, res) => {
         const invoice = event.data.object;
         const subscriptionId = invoice.subscription;
         console.log("💰 Payment succeeded for subscription:", subscriptionId);
-      
+
         await SubscriptionModel.findOneAndUpdate(
           { stripeSubscriptionId: subscriptionId },
           { status: "active" }
         );
-      
+
         console.log("✅ Subscription activated in DB!");
         break;
       }
-      
+
 
       default:
         console.log(`⚙️ [Webhook Triggered] Unhandled Event Type: ${event.type}`);

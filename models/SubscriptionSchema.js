@@ -34,7 +34,22 @@ const SubscriptionSchema = new Schema(
     },
     currentPeriodEnd: {
       type: Date
+    },
+
+    // 🔔 NEW FIELDS
+    downgradeRequestedAt: {
+      type: Date,
+      default: null
+    },
+    downgradeMessage: {
+      type: String,
+      default: ""
+    },
+    downgradeScheduled: {
+      type: Boolean,
+      default: false
     }
+
   },
   {
     timestamps: true
