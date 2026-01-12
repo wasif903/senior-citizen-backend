@@ -303,7 +303,7 @@ export const handleGetCurrentPlanId = async (req, res, next) => {
     })
     const plan = await PlanModel.findById(getPlan.planId);
     const canDowngrade = plan.amount === 0 ? false : true
-    res.status(200).json({ planId: getPlan.planId, canDowngrade, priceId: plan.priceId })
+    res.status(200).json({ planId: getPlan.planId, canDowngrade, priceId: plan.priceId, plan: getPlan })
   } catch (error) {
     console.log(error);
     next(error)
