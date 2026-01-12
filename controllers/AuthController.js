@@ -87,7 +87,7 @@ const handleRegisterUser = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    let newUser = new UserModel({
+    const newUser = new UserModel({
       username,
       email,
       contactNumber,
@@ -175,6 +175,15 @@ const handleRegisterUser = async (req, res, next) => {
     });
   } catch (error) {
     console.log(error);
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const value = error.keyValue[field];
+      return res.status(400).json({
+        message: `A user with this ${field} already exists: ${value}`
+      });
+    }
+
     next(error);
   }
 };
