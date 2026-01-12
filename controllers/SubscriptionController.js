@@ -293,8 +293,22 @@ export const handleDowngradeSubscription = async (req, res, next) => {
   }
 };
 
+export const handleGetCurrentPlanId = async (req, res, next) => {
+  try {
 
-
+    const { userId } = req.params;
+    const getPlan = await SubscriptionModel.findOne({
+      userId: userId,
+      status: "active"
+    })
+    const plan = await PlanModel.findById(getPlan.planId);
+    const canDowngrade = plan.amount === 0 ? false : true
+    res.status(200).json({ planId: getPlan.planId, canDowngrade, priceId: plan.priceId })
+  } catch (error) {
+    console.log(error);
+    next(error)
+  }
+}
 
 // export const handleUpgradeSubscription = async (req, res, next) => {
 //   try {
