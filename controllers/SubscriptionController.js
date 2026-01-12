@@ -221,10 +221,16 @@ export const handleCreateSubscription = async (req, res) => {
       )
     });
 
+    let subscribedPlan;
+    subscribedPlan = {
+      subscription: savedSubscription,
+      plan: findPlan,
+    }
+
     return res.status(200).json({
       success: true,
       message: "Subscription created successfully",
-      subscription: savedSubscription
+      subscribedPlan: subscribedPlan
     });
 
   } catch (error) {
