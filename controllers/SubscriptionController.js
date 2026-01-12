@@ -144,10 +144,16 @@ export const handleCreateSubscription = async (req, res) => {
         currentPeriodEnd: null // free plan does not expire
       });
 
+      let subscribedPlan;
+      subscribedPlan = {
+        subscription: subscription,
+        plan: findPlan,
+      }
+  
       return res.status(200).json({
         success: true,
-        message: "Free plan activated successfully",
-        subscription
+        message: "Subscription created successfully",
+        subscribedPlan: subscribedPlan
       });
     }
 

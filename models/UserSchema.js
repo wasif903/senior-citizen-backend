@@ -80,6 +80,11 @@ const UserSchema = new Schema(
       type: String,
       // required: true
     },
+    profilePicture: {
+      type: String,
+      // required: true
+      default: ""
+    },
     otpExpire: {
       type: Date,
     },

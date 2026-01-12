@@ -55,7 +55,9 @@ router.patch("/change-password", changePassword);
 
 router.get("/get-profile/:id", handleGetUserProfile);
 
-router.patch("/update-user/:id", HandleUpdateProfile);
+router.patch("/update-user/:id",
+  CreateUploadMiddleware([{ name: "medicareFile", isMultiple: false }, { name: "profilePicture", isMultiple: false }]),
+  HandleUpdateProfile);
 
 router.get("/get-users", handleGetUsers);
 
