@@ -92,7 +92,7 @@ const handleGetReminders = async (req, res, next) => {
       const pipeline = [
         {
           $match: {
-            userId: new mongoose.Types.ObjectId(userId)
+            userId: new mongoose.Types.ObjectId(userId),
           }
         },
         {
@@ -155,7 +155,7 @@ const handleGetReminders = async (req, res, next) => {
       const countPipeline = [
         {
           $match: {
-            userId: new mongoose.Types.ObjectId(userId)
+            userId: new mongoose.Types.ObjectId(userId),
           }
         }
       ];
@@ -177,6 +177,7 @@ const handleGetReminders = async (req, res, next) => {
       });
     } else if (findUser.role === "Admin") {
       const pipeline = [
+        
         {
           $lookup: {
             from: "users",

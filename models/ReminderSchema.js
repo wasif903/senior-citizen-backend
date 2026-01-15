@@ -28,7 +28,8 @@ const ReminderSchema = new Schema(
     },
     note: {
       type: String
-    }
+    },
+   
   },
   {
     timestamps: true

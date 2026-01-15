@@ -88,6 +88,7 @@ const UserSchema = new Schema(
     otpExpire: {
       type: Date,
     },
+
   },
   {
     timestamps: true,

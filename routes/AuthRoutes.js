@@ -13,7 +13,8 @@ import {
   handleGetUsers,
   handleGetAdminDashboard,
   handleUpdatePassword,
-  handleUpdateTimezone
+  handleUpdateTimezone,
+  handleDeleteAccount
 } from "../controllers/AuthController.js";
 import validate from "../middlewares/ValidationHandler.js";
 import {
@@ -66,5 +67,7 @@ router.patch("/:id/update-password", handleUpdatePassword);
 router.patch("/update-timezone", handleUpdateTimezone);
 
 router.get("/:adminID/dashboard", handleGetAdminDashboard);
+
+router.patch("/:userId/delete-account", handleDeleteAccount);
 
 export default router;
