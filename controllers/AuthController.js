@@ -12,6 +12,19 @@ import SearchQuery from "../utils/SearchQuery.js";
 import ReminderModel from "../models/ReminderSchema.js";
 import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import expressAsyncHandler from "express-async-handler";
+
+
+
+
+// Phone Number
+// ID Card Number
+// Gender
+// Blood Group
+// Address
+
+
+
+
 // REGISTER
 // METHOD : POST
 // ENDPOINT: /api/register
@@ -77,8 +90,15 @@ const handleRegisterUser = async (req, res, next) => {
 
     const extractPath = ExtractRelativeFilePath(medicareFile);
 
-    let existingUser = await UserModel.findOne({
-      $or: [{ username }, { email }, { idCardNumber }, { medicareNumber }],
+    const orConditions = [];
+
+    if (username) orConditions.push({ username });
+    if (email) orConditions.push({ email });
+    if (idCardNumber) orConditions.push({ idCardNumber });
+    if (medicareNumber) orConditions.push({ medicareNumber });
+
+    const existingUser = await UserModel.findOne({
+      $or: orConditions,
     });
 
     if (existingUser) {
@@ -355,7 +375,7 @@ const handleRegisterUser = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { identifier, password, fcmToken, deviceType, deviceName } = req.body;
-
+    
     const user =
       (await AdminModel.findOne({
         $or: [{ email: identifier }, { username: identifier }],
