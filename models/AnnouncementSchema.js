@@ -22,6 +22,10 @@ const AnnouncementSchema = new Schema(
     sent: {
       type: Boolean,
       default: false
+    },
+    img: {
+      type: String,
+      default: ""
     }
   },
   {

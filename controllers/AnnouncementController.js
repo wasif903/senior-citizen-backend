@@ -1,3 +1,4 @@
+import ExtractRelativeFilePath from "../middlewares/ExtractRelativePath.js";
 import AdminModel from "../models/AdminSchema.js";
 import AnnouncementModel from "../models/AnnouncementSchema.js";
 import SearchQuery from "../utils/SearchQuery.js";
@@ -13,6 +14,12 @@ const handleCreateAnnouncement = async (req, res, next) => {
       announcementTimeEnd
     } = req.body;
 
+    const img = req.files && req.files.img;
+    let imgPath;
+    if (img) {
+      imgPath = ExtractRelativeFilePath(imgPath);
+    }
+
     const findAdmin = await AdminModel.findById(adminID);
     if (!findAdmin) {
       return res.status(404).json({ message: "Invalid Id provided" });
@@ -22,7 +29,8 @@ const handleCreateAnnouncement = async (req, res, next) => {
       title,
       desc,
       announcementTimeStart,
-      announcementTimeEnd
+      announcementTimeEnd,
+      img: imgPath || ""
     });
     await handleCreateAnnouncement.save();
     res.status(200).json({ message: "Announcement Created Successfully" });
