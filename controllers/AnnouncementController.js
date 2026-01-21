@@ -17,7 +17,7 @@ const handleCreateAnnouncement = async (req, res, next) => {
     const img = req.files && req.files.img;
     let imgPath;
     if (img) {
-      imgPath = ExtractRelativeFilePath(imgPath);
+      imgPath = ExtractRelativeFilePath(img);
     }
 
     const findAdmin = await AdminModel.findById(adminID);
