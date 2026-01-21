@@ -177,6 +177,12 @@ const UserSchema = new Schema(
       default: "User",
     },
 
+    mood: {
+      type: String,
+      enum: ["Happy", "Angry", "Sad", "Normal"],
+      default: "Normal",
+    },
+
     sessions: [SessionSchema],
 
     otp: String,

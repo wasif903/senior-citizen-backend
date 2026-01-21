@@ -169,6 +169,7 @@ const handleRegisterUser = async (req, res, next) => {
     const userDetails = {
       _id: newUser._id,
       username: newUser.username,
+      mood: newUser.mood,
       email: newUser.email,
       idCardNumber: newUser.idCardNumber,
       contactNumber: newUser.contactNumber,
@@ -446,6 +447,7 @@ const login = async (req, res, next) => {
       details = {
         _id: user._id,
         username: user.username,
+        mood: user.mood,
         email: user.email,
         idCardNumber: user.idCardNumber,
         medicareNumber: user.medicareNumber,
@@ -733,6 +735,7 @@ const HandleUpdateProfile = async (req, res, next) => {
       const medicines = clean(req.body.medicines);
       const healthNote = clean(req.body.healthNote);
       const password = clean(req.body.password);
+      const mood = clean(req.body.mood);
 
       const medicareFile = req?.files?.medicareFile?.[0];
       const profilePicture = req?.files?.profilePicture?.[0];
@@ -786,6 +789,7 @@ const HandleUpdateProfile = async (req, res, next) => {
       if (pastOperation) user.pastOperation = pastOperation;
       if (medicines) user.medicines = medicines;
       if (healthNote) user.healthNote = healthNote;
+      if (mood) user.mood = mood;
 
       if (password) {
         user.password = await bcrypt.hash(password, 10);
@@ -814,6 +818,7 @@ const HandleUpdateProfile = async (req, res, next) => {
       const details = {
         _id: user._id,
         username: user.username,
+        mood: user.mood,
         email: user.email,
         idCardNumber: user.idCardNumber,
         medicareNumber: user.medicareNumber,
@@ -828,6 +833,7 @@ const HandleUpdateProfile = async (req, res, next) => {
         medicines: user.medicines,
         healthNote: user.healthNote,
         createdAt: user.createdAt,
+        mood: user.mood,
         subscribedPlan,
       };
 
@@ -877,6 +883,7 @@ const handleGetUserProfile = async (req, res, next) => {
       const details = {
         _id: findUser._id,
         username: findUser.username,
+        mood: findUser.mood,
         email: findUser.email,
         idCardNumber: findUser.idCardNumber,
         contactNumber: findUser.contactNumber,
@@ -955,7 +962,7 @@ const handleGetUsers = async (req, res, next) => {
           _id: 1,
           username: 1,
           email: 1,
-          username: 1,
+          mood: 1,
           email: 1,
           idCardNumber: 1,
           medicareNumber: 1,

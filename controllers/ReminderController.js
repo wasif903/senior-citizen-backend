@@ -124,6 +124,7 @@ const handleGetReminders = async (req, res, next) => {
             users: {
               _id: 1,
               username: 1,
+              mood: 1,
               email: 1,
               idCardNumber: 1,
               medicareNumber: 1,
@@ -207,6 +208,7 @@ const handleGetReminders = async (req, res, next) => {
             users: {
               _id: 1,
               username: 1,
+              mood: 1,
               email: 1,
               idCardNumber: 1,
               medicareNumber: 1,
