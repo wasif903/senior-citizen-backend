@@ -14,7 +14,7 @@ const handleCreateAnnouncement = async (req, res, next) => {
       announcementTimeEnd
     } = req.body;
 
-    const img = req.files && req.files.img;
+    const img = req.files && req.files.img[0];
     let imgPath;
     if (img) {
       imgPath = ExtractRelativeFilePath(img);
