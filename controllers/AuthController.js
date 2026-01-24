@@ -84,11 +84,11 @@ const handleRegisterUser = async (req, res, next) => {
 
     const medicareFile = req?.files?.medicareFile?.[0];
 
-    if (!medicareFile) {
-      return res.status(400).json({ message: "Medicare File is required!" });
+    let extractPath;
+    if (medicareFile) {
+      extractPath = ExtractRelativeFilePath(medicareFile);
+      // return res.status(400).json({ message: "Medicare File is required!" });
     }
-
-    const extractPath = ExtractRelativeFilePath(medicareFile);
 
     const orConditions = [];
 
@@ -376,7 +376,7 @@ const handleRegisterUser = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { identifier, password, fcmToken, deviceType, deviceName } = req.body;
-    
+
     const user =
       (await AdminModel.findOne({
         $or: [{ email: identifier }, { username: identifier }],
