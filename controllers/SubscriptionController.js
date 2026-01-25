@@ -683,8 +683,15 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
 
     // Calculate revenue for admin
     let revenue = 0;
+    let freeCount = 0;
+    let premiumCount = 0;
     if (findUser.role === "Admin") {
       const revenuePipeline = [
+        {
+          $match: {
+            status: "active"
+          }
+        },
         {
           $lookup: {
             from: "plans",
@@ -704,18 +711,40 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
       // Apply the same match stage as the main query
       if (matchStage) revenuePipeline.push(matchStage);
 
-      // Calculate total revenue
+      // Calculate total revenue and plan counts
       revenuePipeline.push({
         $group: {
           _id: null,
           totalRevenue: {
             $sum: "$plan.amount"
+          },
+          freeUsers: {
+            $sum: {
+              $cond: [
+                { $eq: ["$plan.title", "Free"] },
+                1,
+                0
+              ]
+            }
+          },
+          premiumUsers: {
+            $sum: {
+              $cond: [
+                { $eq: ["$plan.title", "Premium"] },
+                1,
+                0
+              ]
+            }
           }
         }
       });
 
       const revenueResult = await SubscriptionModel.aggregate(revenuePipeline);
-      revenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+      if (revenueResult.length > 0) {
+        revenue = revenueResult[0].totalRevenue;
+        freeCount = revenueResult[0].freeUsers;
+        premiumCount = revenueResult[0].premiumUsers;
+      }
     }
 
     const responseData = {
@@ -728,9 +757,11 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
       }
     };
 
-    // Add revenue field only for admin
+    // Add revenue and plan counts for admin
     if (findUser.role === "Admin") {
       responseData.meta.revenue = revenue;
+      responseData.meta.freeUsers = freeCount;
+      responseData.meta.premiumUsers = premiumCount;
     }
 
     res.status(200).json(responseData);
