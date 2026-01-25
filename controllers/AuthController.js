@@ -744,8 +744,6 @@ const HandleUpdateProfile = async (req, res, next) => {
       const userOrConditions = [];
       if (username) userOrConditions.push({ username });
       if (email) userOrConditions.push({ email });
-      if (idCardNumber) userOrConditions.push({ idCardNumber });
-      if (medicareNumber) userOrConditions.push({ medicareNumber });
 
       let existingUser = null;
 
