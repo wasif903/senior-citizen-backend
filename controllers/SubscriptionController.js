@@ -2,6 +2,9 @@ import Stripe from "stripe";
 import SubscriptionModel from "../models/SubscriptionSchema.js";
 import UserModel from "../models/UserSchema.js";
 import PlanModel from "../models/PlanScheme.js";
+import AdminModel from "../models/AdminSchema.js";
+import SearchQuery from "../utils/SearchQuery.js";
+import mongoose from "mongoose";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -149,7 +152,7 @@ export const handleCreateSubscription = async (req, res) => {
         subscription: subscription,
         plan: findPlan,
       }
-  
+
       return res.status(200).json({
         success: true,
         message: "Subscription created successfully",
@@ -550,5 +553,189 @@ export const HandleGetPaymentIntent = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export const handleGetSubscriptionDetails = async (req, res, next) => {
+  try {
+
+    const { userId } = req.params;
+
+    const findUser = await AdminModel.findById(userId) || await UserModel.findById(userId);
+
+    if (!findUser) {
+      return res.status(404).json({ message: "User Not Found" })
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const search = req.query.search || {};
+    const matchStage = SearchQuery(search);
+
+    const pipeline = [];
+
+    if (findUser.role === "Admin") {
+      pipeline.push({
+        $match: {
+          status: "active"
+        }
+      }, {
+        $lookup: {
+          from: "plans",
+          localField: "planId",
+          foreignField: "_id",
+          as: "plan",
+        },
+      },
+        {
+          $unwind: {
+            path: "$plan",
+            preserveNullAndEmptyArrays: true,
+          },
+        }, {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+        {
+          $unwind: {
+            path: "$user",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            planId: 1,
+            stripeSubscriptionId: 1,
+            stripeCustomerId: 1,
+            status: 1,
+            startDate: 1,
+            currentPeriodEnd: 1,
+            downgradeRequestedAt: 1,
+            downgradeMessage: 1,
+            downgradeScheduled: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            __v: 1,
+            plan: 1,
+            "user._id": 1,
+            "user.username": 1,
+            "user.email": 1,
+            "user.profilePicture": 1
+          }
+        })
+    } else {
+      pipeline.push({
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        }
+      }, {
+        $lookup: {
+          from: "plans",
+          localField: "planId",
+          foreignField: "_id",
+          as: "plan",
+        },
+      },
+        {
+          $unwind: {
+            path: "$plan",
+            preserveNullAndEmptyArrays: true,
+          },
+        })
+    }
+
+    if (matchStage) pipeline.push(matchStage);
+    pipeline.push({ $sort: { createdAt: -1 } });
+
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
+
+    const announcements = await SubscriptionModel.aggregate(pipeline);
+
+    const countPipeline = [];
+    if (findUser.role === "Admin") {
+      countPipeline.push({
+        $match: {
+          status: "active"
+        }
+      })
+    } else {
+      countPipeline.push({
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        }
+      })
+    }
+    if (matchStage) countPipeline.push(matchStage);
+    countPipeline.push({ $count: "totalItems" });
+
+    const countResult = await SubscriptionModel.aggregate(countPipeline);
+    const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Calculate revenue for admin
+    let revenue = 0;
+    if (findUser.role === "Admin") {
+      const revenuePipeline = [
+        {
+          $lookup: {
+            from: "plans",
+            localField: "planId",
+            foreignField: "_id",
+            as: "plan",
+          },
+        },
+        {
+          $unwind: {
+            path: "$plan",
+            preserveNullAndEmptyArrays: true,
+          },
+        }
+      ];
+
+      // Apply the same match stage as the main query
+      if (matchStage) revenuePipeline.push(matchStage);
+
+      // Calculate total revenue
+      revenuePipeline.push({
+        $group: {
+          _id: null,
+          totalRevenue: {
+            $sum: "$plan.amount"
+          }
+        }
+      });
+
+      const revenueResult = await SubscriptionModel.aggregate(revenuePipeline);
+      revenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+    }
+
+    const responseData = {
+      announcements,
+      meta: {
+        totalItems,
+        totalPages,
+        page,
+        limit
+      }
+    };
+
+    // Add revenue field only for admin
+    if (findUser.role === "Admin") {
+      responseData.meta.revenue = revenue;
+    }
+
+    res.status(200).json(responseData);
+
+  } catch (error) {
+    next(error)
   }
 }
