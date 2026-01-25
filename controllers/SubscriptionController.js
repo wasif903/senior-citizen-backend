@@ -625,6 +625,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
             updatedAt: 1,
             __v: 1,
             plan: 1,
+            title: "$plan.title",
             "user._id": 1,
             "user.username": 1,
             "user.email": 1,
@@ -674,17 +675,16 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
         }
       })
     }
-    if (matchStage) countPipeline.push(matchStage);
     countPipeline.push({ $count: "totalItems" });
 
     const countResult = await SubscriptionModel.aggregate(countPipeline);
     const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
     const totalPages = Math.ceil(totalItems / limit);
 
-    // Calculate revenue for admin
     let revenue = 0;
     let freeCount = 0;
     let premiumCount = 0;
+
     if (findUser.role === "Admin") {
       const revenuePipeline = [
         {
@@ -701,52 +701,36 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
           },
         },
         {
-          $unwind: {
-            path: "$plan",
-            preserveNullAndEmptyArrays: true,
-          },
-        }
-      ];
-
-      // Apply the same match stage as the main query
-      if (matchStage) revenuePipeline.push(matchStage);
-
-      // Calculate total revenue and plan counts
-      revenuePipeline.push({
-        $group: {
-          _id: null,
-          totalRevenue: {
-            $sum: "$plan.amount"
-          },
-          freeUsers: {
-            $sum: {
-              $cond: [
-                { $eq: ["$plan.title", "Free"] },
-                1,
-                0
-              ]
-            }
-          },
-          premiumUsers: {
-            $sum: {
-              $cond: [
-                { $eq: ["$plan.title", "Premium"] },
-                1,
-                0
-              ]
+          $unwind: "$plan"
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: {
+              $sum: { $ifNull: ["$plan.amount", 0] }
+            },
+            freeUsers: {
+              $sum: {
+                $cond: [{ $eq: ["$plan.title", "Free"] }, 1, 0]
+              }
+            },
+            premiumUsers: {
+              $sum: {
+                $cond: [{ $eq: ["$plan.title", "Premium"] }, 1, 0]
+              }
             }
           }
         }
-      });
+      ];
 
       const revenueResult = await SubscriptionModel.aggregate(revenuePipeline);
-      if (revenueResult.length > 0) {
+
+      if (revenueResult.length) {
         revenue = revenueResult[0].totalRevenue;
         freeCount = revenueResult[0].freeUsers;
         premiumCount = revenueResult[0].premiumUsers;
       }
     }
-
     const responseData = {
       subscriptions,
       meta: {
@@ -757,7 +741,6 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
       }
     };
 
-    // Add revenue and plan counts for admin
     if (findUser.role === "Admin") {
       responseData.meta.revenue = revenue;
       responseData.meta.freeUsers = freeCount;
@@ -765,6 +748,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     }
 
     res.status(200).json(responseData);
+
 
   } catch (error) {
     next(error)
