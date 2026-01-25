@@ -658,7 +658,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: limit });
 
-    const announcements = await SubscriptionModel.aggregate(pipeline);
+    const subscriptions = await SubscriptionModel.aggregate(pipeline);
 
     const countPipeline = [];
     if (findUser.role === "Admin") {
@@ -719,7 +719,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     }
 
     const responseData = {
-      announcements,
+      subscriptions,
       meta: {
         totalItems,
         totalPages,
