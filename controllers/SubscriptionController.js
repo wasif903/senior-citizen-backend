@@ -556,32 +556,246 @@ export const HandleGetPaymentIntent = async (req, res) => {
   }
 }
 
+// export const handleGetSubscriptionDetails = async (req, res, next) => {
+//   try {
+
+//     const { userId } = req.params;
+
+//     const findUser = await AdminModel.findById(userId) || await UserModel.findById(userId);
+
+//     if (!findUser) {
+//       return res.status(404).json({ message: "User Not Found" })
+//     }
+
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+//     const search = req.query.search || {};
+//     const matchStage = SearchQuery(search);
+
+//     const pipeline = [];
+
+//     if (findUser.role === "Admin") {
+//       pipeline.push({
+//         $match: {
+//           status: "active"
+//         }
+//       }, {
+//         $lookup: {
+//           from: "plans",
+//           localField: "planId",
+//           foreignField: "_id",
+//           as: "plan",
+//         },
+//       },
+//         {
+//           $unwind: {
+//             path: "$plan",
+//             preserveNullAndEmptyArrays: true,
+//           },
+//         }, {
+//         $lookup: {
+//           from: "users",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "user",
+//         },
+//       },
+//         {
+//           $unwind: {
+//             path: "$user",
+//             preserveNullAndEmptyArrays: true,
+//           },
+//         },
+//         {
+//           $project: {
+//             _id: 1,
+//             userId: 1,
+//             planId: 1,
+//             stripeSubscriptionId: 1,
+//             stripeCustomerId: 1,
+//             status: 1,
+//             startDate: 1,
+//             currentPeriodEnd: 1,
+//             downgradeRequestedAt: 1,
+//             downgradeMessage: 1,
+//             downgradeScheduled: 1,
+//             createdAt: 1,
+//             updatedAt: 1,
+//             __v: 1,
+//             plan: 1,
+//             title: "$plan.title",
+//             "user._id": 1,
+//             "user.username": 1,
+//             "user.email": 1,
+//             "user.profilePicture": 1
+//           }
+//         })
+//     } else {
+//       pipeline.push({
+//         $match: {
+//           userId: new mongoose.Types.ObjectId(userId),
+//         }
+//       }, {
+//         $lookup: {
+//           from: "plans",
+//           localField: "planId",
+//           foreignField: "_id",
+//           as: "plan",
+//         },
+//       },
+//         {
+//           $unwind: {
+//             path: "$plan",
+//             preserveNullAndEmptyArrays: true,
+//           },
+//         })
+//     }
+
+//     if (matchStage) pipeline.push(matchStage);
+//     pipeline.push({ $sort: { createdAt: -1 } });
+
+//     pipeline.push({ $skip: skip });
+//     pipeline.push({ $limit: limit });
+
+//     const subscriptions = await SubscriptionModel.aggregate(pipeline);
+
+//     const countPipeline = [];
+//     if (findUser.role === "Admin") {
+//       countPipeline.push({
+//         $match: {
+//           status: "active"
+//         }
+//       })
+//     } else {
+//       countPipeline.push({
+//         $match: {
+//           userId: new mongoose.Types.ObjectId(userId),
+//         }
+//       })
+//     }
+//     if (matchStage) countPipeline.push(matchStage);
+//     countPipeline.push({ $count: "totalItems" });
+
+//     const countResult = await SubscriptionModel.aggregate(countPipeline);
+//     const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
+//     const totalPages = Math.ceil(totalItems / limit);
+
+//     let revenue = 0;
+//     let freeCount = 0;
+//     let premiumCount = 0;
+
+//     if (findUser.role === "Admin") {
+//       const revenuePipeline = [
+//         {
+//           $match: {
+//             status: "active"
+//           }
+//         },
+//         {
+//           $lookup: {
+//             from: "plans",
+//             localField: "planId",
+//             foreignField: "_id",
+//             as: "plan",
+//           },
+//         },
+//         {
+//           $unwind: "$plan"
+//         },
+//         {
+//           $group: {
+//             _id: null,
+//             totalRevenue: {
+//               $sum: { $ifNull: ["$plan.amount", 0] }
+//             },
+//             freeUsers: {
+//               $sum: {
+//                 $cond: [{ $eq: ["$plan.title", "Free"] }, 1, 0]
+//               }
+//             },
+//             premiumUsers: {
+//               $sum: {
+//                 $cond: [{ $eq: ["$plan.title", "Premium"] }, 1, 0]
+//               }
+//             }
+//           }
+//         }
+//       ];
+
+//       const revenueResult = await SubscriptionModel.aggregate(revenuePipeline);
+
+//       if (revenueResult.length) {
+//         revenue = revenueResult[0].totalRevenue;
+//         freeCount = revenueResult[0].freeUsers;
+//         premiumCount = revenueResult[0].premiumUsers;
+//       }
+//     }
+//     const responseData = {
+//       subscriptions,
+//       meta: {
+//         totalItems,
+//         totalPages,
+//         page,
+//         limit
+//       }
+//     };
+
+//     if (findUser.role === "Admin") {
+//       responseData.meta.revenue = revenue;
+//       responseData.meta.freeUsers = freeCount;
+//       responseData.meta.premiumUsers = premiumCount;
+//     }
+
+//     res.status(200).json(responseData);
+
+
+//   } catch (error) {
+//     next(error)
+//   }
+// }
+
 export const handleGetSubscriptionDetails = async (req, res, next) => {
   try {
-
     const { userId } = req.params;
 
-    const findUser = await AdminModel.findById(userId) || await UserModel.findById(userId);
+    const findUser =
+      (await AdminModel.findById(userId)) ||
+      (await UserModel.findById(userId));
 
     if (!findUser) {
-      return res.status(404).json({ message: "User Not Found" })
+      return res.status(404).json({ message: "User Not Found" });
     }
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const search = req.query.search || {};
-    const matchStage = SearchQuery(search);
+    /** 🔎 FIXED SEARCH */
+    const rawSearch = req.query.search || {};
+    const searchMatch = {};
+
+    if (rawSearch.title) {
+      searchMatch["plan.title"] = {
+        $regex: rawSearch.title,
+        $options: "i",
+      };
+    }
 
     const pipeline = [];
 
-    if (findUser.role === "Admin") {
-      pipeline.push({
-        $match: {
-          status: "active"
-        }
-      }, {
+    /** ROLE BASE MATCH */
+    pipeline.push({
+      $match:
+        findUser.role === "Admin"
+          ? { status: "active" }
+          : { userId: new mongoose.Types.ObjectId(userId) },
+    });
+
+    /** LOOKUP PLAN */
+    pipeline.push(
+      {
         $lookup: {
           from: "plans",
           localField: "planId",
@@ -589,109 +803,88 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
           as: "plan",
         },
       },
+      { $unwind: "$plan" }
+    );
+
+    /** ADMIN USER LOOKUP */
+    if (findUser.role === "Admin") {
+      pipeline.push(
         {
-          $unwind: {
-            path: "$plan",
-            preserveNullAndEmptyArrays: true,
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
           },
-        }, {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
         },
-      },
         {
           $unwind: {
             path: "$user",
             preserveNullAndEmptyArrays: true,
           },
-        },
-        {
-          $project: {
-            _id: 1,
-            userId: 1,
-            planId: 1,
-            stripeSubscriptionId: 1,
-            stripeCustomerId: 1,
-            status: 1,
-            startDate: 1,
-            currentPeriodEnd: 1,
-            downgradeRequestedAt: 1,
-            downgradeMessage: 1,
-            downgradeScheduled: 1,
-            createdAt: 1,
-            updatedAt: 1,
-            __v: 1,
-            plan: 1,
-            title: "$plan.title",
-            "user._id": 1,
-            "user.username": 1,
-            "user.email": 1,
-            "user.profilePicture": 1
-          }
-        })
-    } else {
-      pipeline.push({
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
         }
-      }, {
-        $lookup: {
-          from: "plans",
-          localField: "planId",
-          foreignField: "_id",
-          as: "plan",
-        },
-      },
-        {
-          $unwind: {
-            path: "$plan",
-            preserveNullAndEmptyArrays: true,
-          },
-        })
+      );
     }
 
-    if (matchStage) pipeline.push(matchStage);
-    pipeline.push({ $sort: { createdAt: -1 } });
+    /** 🔎 SEARCH MATCH (MUST BE HERE) */
+    if (Object.keys(searchMatch).length) {
+      pipeline.push({ $match: searchMatch });
+    }
 
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: limit });
+    /** SORT + PAGINATION */
+    pipeline.push(
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
+
+    /** PROJECT */
+    pipeline.push({
+      $project: {
+        _id: 1,
+        userId: 1,
+        planId: 1,
+        stripeSubscriptionId: 1,
+        stripeCustomerId: 1,
+        status: 1,
+        startDate: 1,
+        currentPeriodEnd: 1,
+        downgradeRequestedAt: 1,
+        downgradeMessage: 1,
+        downgradeScheduled: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        plan: 1,
+        title: "$plan.title",
+        "user._id": 1,
+        "user.username": 1,
+        "user.email": 1,
+        "user.profilePicture": 1,
+      },
+    });
 
     const subscriptions = await SubscriptionModel.aggregate(pipeline);
 
-    const countPipeline = [];
-    if (findUser.role === "Admin") {
-      countPipeline.push({
-        $match: {
-          status: "active"
-        }
-      })
-    } else {
-      countPipeline.push({
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
-        }
-      })
-    }
+    /** COUNT PIPELINE */
+    const countPipeline = pipeline.filter(
+      (stage) =>
+        !stage.$skip && !stage.$limit && !stage.$sort && !stage.$project
+    );
+
     countPipeline.push({ $count: "totalItems" });
 
     const countResult = await SubscriptionModel.aggregate(countPipeline);
-    const totalItems = countResult.length > 0 ? countResult[0].totalItems : 0;
+    const totalItems = countResult[0]?.totalItems || 0;
     const totalPages = Math.ceil(totalItems / limit);
 
-    let revenue = 0;
-    let freeCount = 0;
-    let premiumCount = 0;
+    /** ADMIN STATS */
+    let revenue = 0,
+      freeCount = 0,
+      premiumCount = 0;
 
     if (findUser.role === "Admin") {
-      const revenuePipeline = [
-        {
-          $match: {
-            status: "active"
-          }
-        },
+      const revenueResult = await SubscriptionModel.aggregate([
+        { $match: { status: "active" } },
         {
           $lookup: {
             from: "plans",
@@ -700,30 +893,20 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
             as: "plan",
           },
         },
-        {
-          $unwind: "$plan"
-        },
+        { $unwind: "$plan" },
         {
           $group: {
             _id: null,
-            totalRevenue: {
-              $sum: { $ifNull: ["$plan.amount", 0] }
-            },
+            totalRevenue: { $sum: "$plan.amount" },
             freeUsers: {
-              $sum: {
-                $cond: [{ $eq: ["$plan.title", "Free"] }, 1, 0]
-              }
+              $sum: { $cond: [{ $eq: ["$plan.title", "Free"] }, 1, 0] },
             },
             premiumUsers: {
-              $sum: {
-                $cond: [{ $eq: ["$plan.title", "Premium"] }, 1, 0]
-              }
-            }
-          }
-        }
-      ];
-
-      const revenueResult = await SubscriptionModel.aggregate(revenuePipeline);
+              $sum: { $cond: [{ $eq: ["$plan.title", "Premium"] }, 1, 0] },
+            },
+          },
+        },
+      ]);
 
       if (revenueResult.length) {
         revenue = revenueResult[0].totalRevenue;
@@ -731,26 +914,22 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
         premiumCount = revenueResult[0].premiumUsers;
       }
     }
-    const responseData = {
+
+    res.status(200).json({
       subscriptions,
       meta: {
         totalItems,
         totalPages,
         page,
-        limit
-      }
-    };
-
-    if (findUser.role === "Admin") {
-      responseData.meta.revenue = revenue;
-      responseData.meta.freeUsers = freeCount;
-      responseData.meta.premiumUsers = premiumCount;
-    }
-
-    res.status(200).json(responseData);
-
-
+        limit,
+        ...(findUser.role === "Admin" && {
+          revenue,
+          freeUsers: freeCount,
+          premiumUsers: premiumCount,
+        }),
+      },
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
