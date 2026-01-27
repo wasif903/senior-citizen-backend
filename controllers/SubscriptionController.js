@@ -111,161 +111,32 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 //   }
 // };
 
-// Working For Now
-// export const handleCreateSubscription = async (req, res) => {
-//   try {
-//     const { userId, planId, priceId, email, paymentMethodId, token } = req.body;
-
-//     if (!userId || !planId || !email) {
-//       return res.status(400).json({ message: "Missing required fields" });
-//     }
-
-//     const findUser = await UserModel.findById(userId);
-//     if (!findUser) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     const findPlan = await PlanModel.findById(planId);
-//     if (!findPlan) {
-//       return res.status(404).json({ message: "Plan not found" });
-//     }
-
-//     console.log(findPlan)
-
-//     // ============================================
-//     //         🆓 FREE PLAN HANDLING
-//     // ============================================
-//     if (findPlan.amount === 0) {
-//       // Directly activate free plan — NO Stripe involved
-//       const subscription = await SubscriptionModel.create({
-//         userId,
-//         planId,
-//         status: "active",
-//         stripeSubscriptionId: null,
-//         stripeCustomerId: findUser.customerId || null,
-//         startDate: new Date(),
-//         currentPeriodEnd: null // free plan does not expire
-//       });
-
-//       let subscribedPlan;
-//       subscribedPlan = {
-//         subscription: subscription,
-//         plan: findPlan,
-//       }
-
-//       return res.status(200).json({
-//         success: true,
-//         message: "Subscription created successfully",
-//         subscribedPlan: subscribedPlan
-//       });
-//     }
-
-//     // ============================================
-//     //         💳 PAID PLAN HANDLING
-//     // ============================================
-
-//     if (!priceId) {
-//       return res.status(400).json({ message: "priceId is required for paid plans" });
-//     }
-
-//     // 1️⃣ Create or get Stripe customer
-//     let customerId = findUser.customerId;
-//     if (!customerId) {
-//       const customer = await stripe.customers.create({ email });
-//       findUser.customerId = customer.id;
-//       await findUser.save();
-//       customerId = customer.id;
-//     }
-
-//     // 2️⃣ Create Payment Method (using token instead of card)
-//     let finalPaymentMethodId = paymentMethodId;
-//     if (!finalPaymentMethodId && token) {
-//       const paymentMethod = await stripe.paymentMethods.create({
-//         type: "card",
-//         card: { token }
-//       });
-//       finalPaymentMethodId = paymentMethod.id;
-//     }
-
-//     // 3️⃣ Attach Payment Method
-//     await stripe.paymentMethods.attach(finalPaymentMethodId, {
-//       customer: customerId
-//     });
-
-//     // 4️⃣ Set as Default Payment Method
-//     await stripe.customers.update(customerId, {
-//       invoice_settings: { default_payment_method: finalPaymentMethodId }
-//     });
-
-//     // 5️⃣ Create Subscription in Stripe
-//     const subscription = await stripe.subscriptions.create({
-//       customer: customerId,
-//       items: [{ price: priceId }],
-//       default_payment_method: finalPaymentMethodId,
-//       payment_behavior: "allow_incomplete",
-//       expand: ["latest_invoice.payment_intent"],
-//       metadata: { userId, planId }
-//     });
-
-//     // 6️⃣ Confirm payment
-//     const paymentIntentId = subscription.latest_invoice.payment_intent?.id;
-//     if (paymentIntentId) {
-//       await stripe.paymentIntents.confirm(paymentIntentId, {
-//         payment_method: finalPaymentMethodId,
-//       });
-//     }
-
-//     // 7️⃣ Save subscription in DB
-//     const savedSubscription = await SubscriptionModel.create({
-//       userId,
-//       planId,
-//       stripeSubscriptionId: subscription.id,
-//       stripeCustomerId: findUser.customerId,
-//       status: subscription.status,
-//       startDate: subscription.start_date
-//         ? new Date(subscription.start_date * 1000)
-//         : new Date(),
-//       currentPeriodEnd: new Date(
-//         subscription.items.data[0].current_period_end * 1000
-//       )
-//     });
-
-//     let subscribedPlan;
-//     subscribedPlan = {
-//       subscription: savedSubscription,
-//       plan: findPlan,
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Subscription created successfully",
-//       subscribedPlan: subscribedPlan
-//     });
-
-//   } catch (error) {
-//     console.error("❌ Error creating subscription:", error);
-//     res.status(500).json({ message: "Failed to create subscription", error });
-//   }
-// };
 
 export const handleCreateSubscription = async (req, res) => {
   try {
-    const { userId, planId, priceId, email, paymentMethodId } = req.body;
+    const { userId, planId, priceId, email, paymentMethodId, token } = req.body;
 
     if (!userId || !planId || !email) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     const findUser = await UserModel.findById(userId);
-    if (!findUser) return res.status(404).json({ message: "User not found" });
+    if (!findUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const findPlan = await PlanModel.findById(planId);
-    if (!findPlan) return res.status(404).json({ message: "Plan not found" });
+    if (!findPlan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
 
-    // ==================================================
-    // 🆓 FREE PLAN (NO STRIPE)
-    // ==================================================
+    console.log(findPlan)
+
+    // ============================================
+    //         🆓 FREE PLAN HANDLING
+    // ============================================
     if (findPlan.amount === 0) {
+      // Directly activate free plan — NO Stripe involved
       const subscription = await SubscriptionModel.create({
         userId,
         planId,
@@ -273,91 +144,107 @@ export const handleCreateSubscription = async (req, res) => {
         stripeSubscriptionId: null,
         stripeCustomerId: findUser.customerId || null,
         startDate: new Date(),
-        currentPeriodEnd: null,
+        currentPeriodEnd: null // free plan does not expire
       });
+
+      let subscribedPlan;
+      subscribedPlan = {
+        subscription: subscription,
+        plan: findPlan,
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Free plan activated",
-        subscribedPlan: { subscription, plan: findPlan },
+        message: "Subscription created successfully",
+        subscribedPlan: subscribedPlan
       });
     }
 
-    // ==================================================
-    // 💳 PAID PLAN
-    // ==================================================
-    if (!priceId || !paymentMethodId) {
-      return res
-        .status(400)
-        .json({ message: "priceId and paymentMethodId are required" });
+    // ============================================
+    //         💳 PAID PLAN HANDLING
+    // ============================================
+
+    if (!priceId) {
+      return res.status(400).json({ message: "priceId is required for paid plans" });
     }
 
-    // 1️⃣ Create or fetch Stripe customer
+    // 1️⃣ Create or get Stripe customer
     let customerId = findUser.customerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email,
-        metadata: { userId },
-      });
-      customerId = customer.id;
-      findUser.customerId = customerId;
+      const customer = await stripe.customers.create({ email });
+      findUser.customerId = customer.id;
       await findUser.save();
+      customerId = customer.id;
     }
 
-    // 2️⃣ Attach Payment Method to customer
-    await stripe.paymentMethods.attach(paymentMethodId, {
-      customer: customerId,
+    // 2️⃣ Create Payment Method (using token instead of card)
+    let finalPaymentMethodId = paymentMethodId;
+    if (!finalPaymentMethodId && token) {
+      const paymentMethod = await stripe.paymentMethods.create({
+        type: "card",
+        card: { token }
+      });
+      finalPaymentMethodId = paymentMethod.id;
+    }
+
+    // 3️⃣ Attach Payment Method
+    await stripe.paymentMethods.attach(finalPaymentMethodId, {
+      customer: customerId
     });
 
-    // 3️⃣ Set default payment method
+    // 4️⃣ Set as Default Payment Method
     await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: paymentMethodId },
+      invoice_settings: { default_payment_method: finalPaymentMethodId }
     });
 
-    const stripeSubscription = await stripe.subscriptions.create({
+    // 5️⃣ Create Subscription in Stripe
+    const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
-      payment_behavior: "default_incomplete",
-      payment_settings: { payment_method_types: ["card"] },
-      expand: ["latest_invoice.confirmation_secret"],
-      metadata: { userId, planId },
+      default_payment_method: finalPaymentMethodId,
+      payment_behavior: "allow_incomplete",
+      expand: ["latest_invoice.payment_intent"],
+      metadata: { userId, planId }
     });
 
-    const clientSecret =
-      stripeSubscription.latest_invoice?.confirmation_secret.client_secret;
-
-    if (!clientSecret) {
-      return res.status(500).json({ message: "Client secret not returned" });
+    // 6️⃣ Confirm payment
+    const paymentIntentId = subscription.latest_invoice.payment_intent?.id;
+    if (paymentIntentId) {
+      await stripe.paymentIntents.confirm(paymentIntentId, {
+        payment_method: finalPaymentMethodId,
+      });
     }
-    console.log(stripeSubscription.start_date);
-    // 6️⃣ Save subscription as pending (WAIT FOR WEBHOOK)
+
+    // 7️⃣ Save subscription in DB
     const savedSubscription = await SubscriptionModel.create({
       userId,
       planId,
-      stripeSubscriptionId: stripeSubscription.id,
-      stripeCustomerId: customerId,
-      status: stripeSubscription.status,
-      startDate: stripeSubscription.start_date
-        ? new Date(stripeSubscription.start_date * 1000)
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: findUser.customerId,
+      status: subscription.status,
+      startDate: subscription.start_date
+        ? new Date(subscription.start_date * 1000)
         : new Date(),
-      currentPeriodEnd: stripeSubscription.latest_invoice?.period_end
-        ? new Date(stripeSubscription.latest_invoice.period_end * 1000)
-        : null,
+      currentPeriodEnd: new Date(
+        subscription.items.data[0].current_period_end * 1000
+      )
     });
 
-    // 7️⃣ Return client secret to frontend
+    let subscribedPlan;
+    subscribedPlan = {
+      subscription: savedSubscription,
+      plan: findPlan,
+    }
+
     return res.status(200).json({
       success: true,
-      subscriptionId: stripeSubscription.id,
-      clientSecret,
-      subscribedPlan: { subscription: savedSubscription, plan: findPlan },
+      message: "Subscription created successfully",
+      subscribedPlan: subscribedPlan
     });
+
   } catch (error) {
-    console.error("❌ Stripe subscription error:", error);
-    return res.status(500).json({
-      message: "Failed to create subscription",
-      error: error.message,
-    });
+    console.error("❌ Error creating subscription:", error);
+    res.status(500).json({ message: "Failed to create subscription", error });
   }
 };
 
@@ -368,26 +255,24 @@ export const handleDowngradeSubscription = async (req, res, next) => {
 
     const existingSub = await SubscriptionModel.findOne({
       userId,
-      status: "active",
+      status: "active"
     });
 
     if (!existingSub?.stripeSubscriptionId) {
-      return res
-        .status(400)
-        .json({ message: "Active paid subscription not found" });
+      return res.status(400).json({ message: "Active paid subscription not found" });
     }
 
     if (existingSub.downgradeScheduled) {
       return res.status(400).json({
         message: "Downgrade already scheduled",
-        downgradeDate: existingSub.endDate,
+        downgradeDate: existingSub.endDate
       });
     }
 
     const freePlan = await PlanModel.findOne({
       _id: downgradeTo,
       amount: 0,
-      active: true,
+      active: true
     });
 
     if (!freePlan) {
@@ -396,9 +281,9 @@ export const handleDowngradeSubscription = async (req, res, next) => {
 
     const stripeSub = await stripe.subscriptions.update(
       existingSub.stripeSubscriptionId,
-      { cancel_at_period_end: true },
+      { cancel_at_period_end: true }
     );
-    const downgradeDate = new Date(stripeSub.cancel_at * 1000);
+    const downgradeDate = new Date(stripeSub.cancel_at * 1000)
     const requestedAt = new Date();
     const message = downgradeDate
       ? `Your subscription will downgrade to the Free plan on ${downgradeDate.toDateString()}.`
@@ -408,14 +293,15 @@ export const handleDowngradeSubscription = async (req, res, next) => {
       endDate: downgradeDate,
       downgradeScheduled: true,
       downgradeRequestedAt: requestedAt,
-      downgradeMessage: message,
+      downgradeMessage: message
     });
 
     return res.status(200).json({
       message: "Subscription downgrade scheduled successfully",
       downgradeDate,
-      downgradeRequestedAt: requestedAt,
+      downgradeRequestedAt: requestedAt
     });
+
   } catch (error) {
     console.error("❌ Downgrade failed:", error);
     next(error);
@@ -424,24 +310,20 @@ export const handleDowngradeSubscription = async (req, res, next) => {
 
 export const handleGetCurrentPlanId = async (req, res, next) => {
   try {
+
     const { userId } = req.params;
     const getPlan = await SubscriptionModel.findOne({
       userId: userId,
-      status: "active",
-    });
+      status: "active"
+    })
     const plan = await PlanModel.findById(getPlan.planId);
-    const canDowngrade = plan.amount === 0 ? false : true;
-    res.status(200).json({
-      planId: getPlan.planId,
-      canDowngrade,
-      priceId: plan.priceId,
-      plan: getPlan,
-    });
+    const canDowngrade = plan.amount === 0 ? false : true
+    res.status(200).json({ planId: getPlan.planId, canDowngrade, priceId: plan.priceId, plan: getPlan })
   } catch (error) {
     console.log(error);
-    next(error);
+    next(error)
   }
-};
+}
 
 // export const handleUpgradeSubscription = async (req, res, next) => {
 //   try {
@@ -565,7 +447,7 @@ export const handleUpgradeSubscription = async (req, res, next) => {
     // 1️⃣ Existing active subscription
     const existingSub = await SubscriptionModel.findOne({
       userId,
-      status: "active",
+      status: "active"
     });
 
     if (!existingSub) {
@@ -585,7 +467,7 @@ export const handleUpgradeSubscription = async (req, res, next) => {
     if (!finalPaymentMethodId && token) {
       const pm = await stripe.paymentMethods.create({
         type: "card",
-        card: { token },
+        card: { token }
       });
       finalPaymentMethodId = pm.id;
     }
@@ -595,11 +477,9 @@ export const handleUpgradeSubscription = async (req, res, next) => {
     }
 
     // 4️⃣ Attach & set default payment method
-    await stripe.paymentMethods.attach(finalPaymentMethodId, {
-      customer: customerId,
-    });
+    await stripe.paymentMethods.attach(finalPaymentMethodId, { customer: customerId });
     await stripe.customers.update(customerId, {
-      invoice_settings: { default_payment_method: finalPaymentMethodId },
+      invoice_settings: { default_payment_method: finalPaymentMethodId }
     });
 
     // 5️⃣ Create NEW subscription (instant charge)
@@ -611,15 +491,15 @@ export const handleUpgradeSubscription = async (req, res, next) => {
       expand: ["latest_invoice.payment_intent"],
       metadata: {
         userId: String(userId),
-        planId: String(newPlan._id),
-      },
+        planId: String(newPlan._id)
+      }
     });
 
     // 6️⃣ Confirm payment
     const paymentIntent = newStripeSub.latest_invoice?.payment_intent;
     if (paymentIntent?.id) {
       await stripe.paymentIntents.confirm(paymentIntent.id, {
-        payment_method: finalPaymentMethodId,
+        payment_method: finalPaymentMethodId
       });
     }
 
@@ -627,7 +507,7 @@ export const handleUpgradeSubscription = async (req, res, next) => {
     if (existingSub.stripeSubscriptionId) {
       await stripe.subscriptions.update(existingSub.stripeSubscriptionId, {
         cancel_at_period_end: false,
-        status: "canceled",
+        status: "canceled"
       });
     }
 
@@ -640,39 +520,41 @@ export const handleUpgradeSubscription = async (req, res, next) => {
       startDate: new Date(),
       endDate: null,
       currentPeriodEnd: new Date(
-        newStripeSub.items.data[0].current_period_end * 1000,
+        newStripeSub.items.data[0].current_period_end * 1000
       ),
 
       downgradeScheduled: false,
       downgradeRequestedAt: null,
-      downgradeMessage: "",
+      downgradeMessage: ""
     });
 
     return res.status(200).json({
       message: "Subscription upgraded successfully",
-      subscriptionId: newStripeSub.id,
+      subscriptionId: newStripeSub.id
     });
+
   } catch (error) {
     console.error("❌ Upgrade failed:", error);
     next(error);
   }
 };
 
+
 export const HandleGetPaymentIntent = async (req, res) => {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: req.body.amount * 100,
-      currency: "usd",
+      currency: 'usd',
       automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+        enabled: true
+      }
+    })
     res.status(200).json({ getPaymentIntent: paymentIntent.client_secret });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-};
+}
 
 // export const handleGetSubscriptionDetails = async (req, res, next) => {
 //   try {
@@ -868,6 +750,7 @@ export const HandleGetPaymentIntent = async (req, res) => {
 
 //     res.status(200).json(responseData);
 
+
 //   } catch (error) {
 //     next(error)
 //   }
@@ -878,7 +761,8 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     const { userId } = req.params;
 
     const findUser =
-      (await AdminModel.findById(userId)) || (await UserModel.findById(userId));
+      (await AdminModel.findById(userId)) ||
+      (await UserModel.findById(userId));
 
     if (!findUser) {
       return res.status(404).json({ message: "User Not Found" });
@@ -919,7 +803,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
           as: "plan",
         },
       },
-      { $unwind: "$plan" },
+      { $unwind: "$plan" }
     );
 
     /** ADMIN USER LOOKUP */
@@ -938,7 +822,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
             path: "$user",
             preserveNullAndEmptyArrays: true,
           },
-        },
+        }
       );
     }
 
@@ -951,7 +835,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     pipeline.push(
       { $sort: { createdAt: -1 } },
       { $skip: skip },
-      { $limit: limit },
+      { $limit: limit }
     );
 
     /** PROJECT */
@@ -984,7 +868,7 @@ export const handleGetSubscriptionDetails = async (req, res, next) => {
     /** COUNT PIPELINE */
     const countPipeline = pipeline.filter(
       (stage) =>
-        !stage.$skip && !stage.$limit && !stage.$sort && !stage.$project,
+        !stage.$skip && !stage.$limit && !stage.$sort && !stage.$project
     );
 
     countPipeline.push({ $count: "totalItems" });
