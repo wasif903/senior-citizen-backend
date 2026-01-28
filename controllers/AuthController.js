@@ -151,6 +151,7 @@ const handleRegisterUser = async (req, res, next) => {
 
     const findSubscription = await SubscriptionModel.findOne({
       userId: newUser._id,
+      status: "active"
     });
 
     let subscribedPlan;
@@ -429,6 +430,7 @@ const login = async (req, res, next) => {
 
       const findSubscription = await SubscriptionModel.findOne({
         userId: user._id,
+        status: "active"
       });
 
       let subscribedPlan;
@@ -797,7 +799,8 @@ const HandleUpdateProfile = async (req, res, next) => {
 
       // subscription info
       const findSubscription = await SubscriptionModel.findOne({
-        userId: user._id,
+        userId: user._id, status: "active"
+
       });
 
       let subscribedPlan = null;
@@ -862,7 +865,8 @@ const handleGetUserProfile = async (req, res, next) => {
 
     if (findUser.role === "User") {
       const findSubscription = await SubscriptionModel.findOne({
-        userId: findUser._id,
+        userId: findUser._id, status: "active"
+
       });
 
       let subscribedPlan;

@@ -136,6 +136,18 @@ export const handleStripeWebhook = async (req, res) => {
         break;
       }
 
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+
+        await SubscriptionModel.findOneAndUpdate(
+          { stripeSubscriptionId: invoice.subscription },
+          { status: "past_due" }
+        );
+
+        console.log("❌ Payment failed — subscription marked past_due");
+        break;
+      }
+
 
       default:
         console.log(`⚙️ [Webhook Triggered] Unhandled Event Type: ${event.type}`);
