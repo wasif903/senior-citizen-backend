@@ -12,6 +12,6 @@ import {
 const router = express.Router();
 
 router.post("/:userId/create-reminder", handleCreateReminder);
-router.get("/:userId/get-reminders", handleGetReminders);
+router.get("/:userId/get-reminders", AuthMiddleware, handleGetReminders);
 
 export default router;
