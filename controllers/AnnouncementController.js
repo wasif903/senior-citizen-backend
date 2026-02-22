@@ -82,4 +82,24 @@ const handleGetAnnouncement = async (req, res, next) => {
   }
 };
 
-export { handleCreateAnnouncement, handleGetAnnouncement };
+const handleDeleteAnnouncement = async (req, res, next) => {
+  try {
+
+    const { announcementID } = req.params;
+
+    const findAnnouncement = await AnnouncementModel.findById(announcementID);
+    if (!findAnnouncement) {
+      return res.status(404).json({ message: "Announcement Not Found!" })
+    }
+
+    const deleteAnnouncement = await AnnouncementModel.findByIdAndDelete(announcementID)
+
+    res.status(200).json({ message: "Announcement Deleted Successfully" })
+
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+}
+
+export { handleCreateAnnouncement, handleGetAnnouncement, handleDeleteAnnouncement };
