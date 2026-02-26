@@ -23,7 +23,11 @@ router.post(
 );
 router.get("/", getAllVendors);
 router.get("/:id", getSingleVendor);
-router.patch("/:id", updateVendor);
+router.patch(
+  "/:id",
+  CreateUploadMiddleware([{ name: "image", isMultiple: false }]),
+  updateVendor
+);
 router.delete("/:id", deleteVendor);
 
 export default router;

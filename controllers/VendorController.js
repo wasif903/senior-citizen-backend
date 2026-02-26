@@ -135,7 +135,7 @@ export const updateVendor = async (req, res) => {
     if (image) {
       vendor = await VendorModal.findByIdAndUpdate(
         req.params.id,
-        { image, name, url },
+        { image: extractPath, name, url },
         { new: true, runValidators: true }
       );
 
