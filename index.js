@@ -24,6 +24,7 @@ import PlanRoutes from "./routes/PlanRoutes.js";
 import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
 import ReminderRoutes from "./routes/ReminderRoutes.js";
 import VendorRoutes from "./routes/VendorRoutes.js";
+import AdRoutes from "./routes/AdRoutes.js";
 import AnnouncementRoutes from "./routes/AnnouncementRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
@@ -64,7 +65,7 @@ app.use(
     origin: allowedOrigins,
     credentials: true,
     methods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
-  })
+  }),
 );
 
 // === Security Header Middleware ===
@@ -78,11 +79,11 @@ app.use(
     res.header("Access-Control-Allow-Methods", "GET");
     res.header(
       "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept"
+      "Origin, X-Requested-With, Content-Type, Accept",
     );
     next();
   },
-  express.static("uploads")
+  express.static("uploads"),
 );
 
 // === Rate Limiter
@@ -109,6 +110,7 @@ app.use("/api/subscriptions", SubscripitonRoutes);
 app.use("/api/reminders", ReminderRoutes);
 app.use("/api/announcement", AnnouncementRoutes);
 app.use("/api/vendors", VendorRoutes);
+app.use("/api/ads", AdRoutes);
 
 // === Error Handler
 
@@ -145,7 +147,7 @@ async function sendPushNotification(token, reminder) {
       },
     });
     console.log(
-      `Notification sent to token ${"cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw"}`
+      `Notification sent to token ${"cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw"}`,
     );
   } catch (err) {
     console.error("Error sending notification:", err.message);
@@ -155,5 +157,5 @@ async function sendPushNotification(token, reminder) {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log("Server Running");
+  console.log(`Server Running on http://localhost:${PORT}`);
 });
