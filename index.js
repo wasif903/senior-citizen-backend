@@ -23,6 +23,7 @@ import AuthRoutes from "./routes/AuthRoutes.js";
 import PlanRoutes from "./routes/PlanRoutes.js";
 import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
 import ReminderRoutes from "./routes/ReminderRoutes.js";
+import VendorRoutes from "./routes/VendorRoutes.js";
 import AnnouncementRoutes from "./routes/AnnouncementRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
@@ -62,7 +63,7 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"]
+    methods: ["POST", "GET", "PATCH", "DELETE", "OPTIONS"],
   })
 );
 
@@ -107,6 +108,7 @@ app.use("/api/plans", PlanRoutes);
 app.use("/api/subscriptions", SubscripitonRoutes);
 app.use("/api/reminders", ReminderRoutes);
 app.use("/api/announcement", AnnouncementRoutes);
+app.use("/api/vendors", VendorRoutes);
 
 // === Error Handler
 
@@ -136,11 +138,11 @@ async function sendPushNotification(token, reminder) {
         "cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw",
       notification: {
         title: `Reminder`,
-        body: `Your appointment is at`
+        body: `Your appointment is at`,
       },
       data: {
-        type: "reminder"
-      }
+        type: "reminder",
+      },
     });
     console.log(
       `Notification sent to token ${"cg67ezt8ToW9QgzDwwHE7f:APA91bFHDXzN1Mow-NxY5BQYOtYmrIuMlRAYqAT5X4IfKNlw0xTHPEd89dr766UtBBTkToL2IPf7glTqQG_w53obhEdP0gP2XIT0iEi4swQmp9-DU-vBNTw"}`
