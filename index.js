@@ -25,6 +25,7 @@ import SubscripitonRoutes from "./routes/SubscripitonRoutes.js";
 import ReminderRoutes from "./routes/ReminderRoutes.js";
 import VendorRoutes from "./routes/VendorRoutes.js";
 import AdRoutes from "./routes/AdRoutes.js";
+import BlogRoutes from "./routes/BlogRoutes.js";
 import AnnouncementRoutes from "./routes/AnnouncementRoutes.js";
 import WebhookRoutes from "./routes/WebhookRoutes.js";
 
@@ -111,6 +112,7 @@ app.use("/api/reminders", ReminderRoutes);
 app.use("/api/announcement", AnnouncementRoutes);
 app.use("/api/vendors", VendorRoutes);
 app.use("/api/ads", AdRoutes);
+app.use("/api/blogs", BlogRoutes);
 
 // === Error Handler
 
