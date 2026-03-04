@@ -5,7 +5,7 @@ import {
     getSingleBlog,
     updateBlog,
     deleteBlog,
-} from "../controllers/blogController.js";
+} from "../controllers/BlogController.js";
 import { CreateUploadMiddleware } from "../middlewares/MulterMiddleware.js";
 
 const router = express.Router();
